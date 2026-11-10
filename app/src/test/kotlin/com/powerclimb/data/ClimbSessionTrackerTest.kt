@@ -116,6 +116,28 @@ class ClimbSessionTrackerTest {
     }
 
     @Test
+    fun `explicit summit freezes average before the finish grace`() {
+        val tracker = ClimbSessionTracker()
+        tracker.onRideState(RideStatus.RECORDING, 0)
+        tracker.onClimbSignal(100.0, 1_000.0, 1, 0)
+
+        for (second in 0..5) {
+            tracker.onPower(200, second * 1_000L)
+        }
+
+        // Native Climber reports the summit at 6s. Power after that point
+        // (for example 0 W while descending) must not pollute the average.
+        tracker.onClimbSignal(0.0, 0.0, 1, 6_000)
+        tracker.onPower(0, 7_000)
+        tracker.onTick(8_000)
+
+        val state = tracker.state.value
+        assertEquals(ClimbPhase.FINISHED, state.phase)
+        assertEquals(200, state.averageWatts)
+        assertEquals(6, state.elapsedSeconds)
+    }
+
+    @Test
     fun `watchdog ends climb when stream stops`() {
         val tracker = ClimbSessionTracker()
         tracker.onRideState(RideStatus.RECORDING, 0)

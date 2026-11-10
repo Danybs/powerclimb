@@ -59,6 +59,7 @@ data class ClimbPowerState(
  */
 class ClimbSessionTracker(
     private val endGraceMs: Long = 5_000L,
+    private val explicitOffGraceMs: Long = 2_000L,
     private val maxPowerGapMs: Long = 3_000L,
     private val minSessionMs: Long = 1_000L,
 ) {
@@ -70,6 +71,7 @@ class ClimbSessionTracker(
     private var ridePaused = false
     private var climbNumber: Int? = null
     private var lastActiveAtMs: Long? = null
+    private var explicitOffAtMs: Long? = null
     private var lastPowerAtMs: Long? = null
     private var lastPowerWatts: Int? = null
     private var accumulatedWattMs = 0.0
@@ -130,6 +132,7 @@ class ClimbSessionTracker(
         }
 
         if (onClimb) {
+            explicitOffAtMs = null
             val newNumber = number?.takeIf { it > 0 }
             if (phase == ClimbPhase.ACTIVE) {
                 if (newNumber != null && climbNumber != null && newNumber != climbNumber) {
@@ -142,12 +145,25 @@ class ClimbSessionTracker(
             } else {
                 startSession(nowMs, newNumber)
             }
-        } else if (
-            phase == ClimbPhase.ACTIVE &&
-            lastActiveAtMs != null &&
-            nowMs - lastActiveAtMs!! >= endGraceMs
-        ) {
-            finish(nowMs)
+        } else if (phase == ClimbPhase.ACTIVE) {
+            val firstOffAt = explicitOffAtMs
+            if (firstOffAt == null) {
+                // Freeze the average at the moment the native Climber reports
+                // the summit. Keep the session alive for a short grace period
+                // in case a single zero packet is a transient glitch.
+                explicitOffAtMs = nowMs
+                flushPower(nowMs)
+                lastPowerAtMs = null
+                lastPowerWatts = null
+            }
+            val offSince = firstOffAt ?: nowMs
+            val lastActive = lastActiveAtMs
+            if (
+                nowMs - offSince >= explicitOffGraceMs ||
+                (lastActive != null && nowMs - lastActive >= endGraceMs)
+            ) {
+                finish(nowMs)
+            }
         }
 
         publish()
@@ -162,7 +178,7 @@ class ClimbSessionTracker(
 
         currentWatts = watts
 
-        if (phase == ClimbPhase.ACTIVE && rideRecording && !ridePaused) {
+        if (phase == ClimbPhase.ACTIVE && rideRecording && !ridePaused && explicitOffAtMs == null) {
             val lastAt = lastPowerAtMs
             val lastW = lastPowerWatts
             if (lastAt == null || lastW == null) {
@@ -199,13 +215,16 @@ class ClimbSessionTracker(
      */
     @Synchronized
     fun onTick(nowMs: Long) {
+        if (phase != ClimbPhase.ACTIVE || ridePaused) return
+
+        val offSince = explicitOffAtMs
         val lastActive = lastActiveAtMs
-        if (
-            phase == ClimbPhase.ACTIVE &&
-            !ridePaused &&
-            lastActive != null &&
-            nowMs - lastActive >= endGraceMs
-        ) {
+        val shouldFinish = when {
+            offSince != null && nowMs - offSince >= explicitOffGraceMs -> true
+            lastActive != null && nowMs - lastActive >= endGraceMs -> true
+            else -> false
+        }
+        if (shouldFinish) {
             finish(nowMs)
             publish()
         }
@@ -215,6 +234,7 @@ class ClimbSessionTracker(
         phase = ClimbPhase.ACTIVE
         climbNumber = number
         lastActiveAtMs = nowMs
+        explicitOffAtMs = null
         lastPowerAtMs = null
         lastPowerWatts = null
         accumulatedWattMs = 0.0
@@ -229,6 +249,7 @@ class ClimbSessionTracker(
         finalAverageWatts = averageOrNull()
         phase = ClimbPhase.FINISHED
         lastActiveAtMs = null
+        explicitOffAtMs = null
         lastPowerAtMs = null
         lastPowerWatts = null
     }
@@ -249,6 +270,7 @@ class ClimbSessionTracker(
         phase = ClimbPhase.IDLE
         climbNumber = null
         lastActiveAtMs = null
+        explicitOffAtMs = null
         lastPowerAtMs = null
         lastPowerWatts = null
         accumulatedWattMs = 0.0

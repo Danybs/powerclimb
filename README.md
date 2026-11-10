@@ -27,7 +27,7 @@ Versión `0.1.0` (MVP).
 - Media **ponderada por tiempo**.
 - Los ceros de potencia cuentan mientras haya señal y la ruta no esté pausada.
 - Los huecos de potencia de más de 3 segundos se excluyen de la media.
-- El final de subida se confirma tras 5 segundos sin señal activa, para no cortar por un fallo puntual del GPS o del stream.
+- Al detectar el coronamiento se congela la media inmediatamente. El final se confirma tras 2 segundos de señal explícita a cero, o tras 5 segundos si el stream deja de emitir, para no cortar por un fallo puntual del GPS o del stream.
 - La normalizada (NP) queda para una versión posterior. El diseño ya guarda la información necesaria para añadirla sin rehacer el tracker.
 
 ## Requisitos
@@ -121,6 +121,7 @@ Detalles:
 - Si la potencia es `0` porque el ciclista va a rueda o sin pedalear, ese cero cuenta.
 - Si el stream de potencia desaparece más de 3 segundos, ese intervalo no entra en el denominador.
 - Al pausar la ruta se cierra el intervalo pendiente y se congela la media.
+- Al coronar se cierra el intervalo pendiente en ese instante; los vatios posteriores no entran en la media.
 - Al reanudar se vuelve a tomar la primera muestra como referencia.
 
 ## Estructura
