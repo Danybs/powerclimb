@@ -9,15 +9,6 @@ La presentación es minimalista y transparente, con tipografías y colores nativ
 
 En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. El tamaño del número se calcula para cada hueco (1x1, 1x2, 2x1 y 2x2) usando las métricas de la fuente numérica nativa, de modo que sea lo más grande posible sin recortarse.
 
-## Base técnica
-
-PowerClimb usa la librería oficial de extensiones de Karoo:
-
-- Repositorio: [hammerheadnav/karoo-ext](https://github.com/hammerheadnav/karoo-ext)
-- Dependencia: `com.github.hammerheadnav:karoo-ext:1.1.9`
-
-No es un fork del repositorio: es una app independiente construida sobre su API de extensiones, data types, streams y `RemoteViews`.
-
 ## Instalar desde Releases
 
 Cada push a `main` compila, firma y publica `powerclimb.apk` en [Releases](../../releases/latest).
@@ -44,6 +35,15 @@ https://github.com/<usuario>/<repo>/releases/latest/download/powerclimb.apk
 El workflow usa `versionName` como tag (`v0.3.0`). Para publicar una versión nueva, sube `versionCode` y `versionName` en `app/build.gradle.kts`.
 
 Las builds de CI se firman con la clave pública `ci/powerclimb-ci.jks` para que las actualizaciones sean instalables. Se puede sustituir por una clave privada configurando los secrets indicados en [`ci/README.md`](ci/README.md).
+
+## Base técnica
+
+PowerClimb usa la librería oficial de extensiones de Karoo:
+
+- Repositorio: [hammerheadnav/karoo-ext](https://github.com/hammerheadnav/karoo-ext)
+- Dependencia: `com.github.hammerheadnav:karoo-ext:1.1.9`
+
+No es un fork del repositorio: es una app independiente construida sobre su API de extensiones, data types, streams y `RemoteViews`.
 
 ## Qué hace
 
