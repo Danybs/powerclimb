@@ -4,7 +4,12 @@ plugins {
 }
 
 val ciKeystore = rootProject.file("ci/powerclimb-ci.jks")
-val externalKeystore = System.getenv("RELEASE_KEYSTORE_PATH")
+
+// GitHub Actions defines these env vars even when the secrets are unset, so an
+// empty value must fall back to the committed CI key instead of overriding it.
+fun envOrNull(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+
+val externalKeystore = envOrNull("RELEASE_KEYSTORE_PATH")
 
 // CI calculates the version from git tags and passes it in; local builds use
 // the defaults below.
@@ -26,9 +31,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = externalKeystore?.let { file(it) } ?: ciKeystore
-            storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: "powerclimbci"
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "powerclimb"
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "powerclimbci"
+            storePassword = envOrNull("RELEASE_KEYSTORE_PASSWORD") ?: "powerclimbci"
+            keyAlias = envOrNull("RELEASE_KEY_ALIAS") ?: "powerclimb"
+            keyPassword = envOrNull("RELEASE_KEY_PASSWORD") ?: "powerclimbci"
         }
     }
 
