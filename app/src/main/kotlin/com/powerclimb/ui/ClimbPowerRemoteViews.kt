@@ -157,7 +157,7 @@ object ClimbPowerRemoteViews {
             density = density,
             scaledDensity = scaledDensity,
             digits = digits,
-            verticalPaddingDp = if (compact) 1.5f else 2.5f,
+            verticalPaddingDp = if (compact) 3f else 4f,
         )
     }
 
