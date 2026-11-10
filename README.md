@@ -29,6 +29,12 @@ Cada push a `main` compila, firma y publica `powerclimb.apk` en [Releases](../..
 adb install powerclimb.apk
 ```
 
+Si ya tienes instalada una build debug anterior con otra firma, desinstálala una vez antes de instalar la release:
+
+```bash
+adb uninstall com.powerclimb
+```
+
 La URL directa al último APK es:
 
 ```text
