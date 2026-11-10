@@ -4,19 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    android:paddingLeft="8dp"
     android:paddingTop="2dp"
-    android:paddingRight="8dp"
-    android:paddingBottom="2dp">
+    android:paddingBottom="4dp">
 
     <TextView
         android:id="@+id/field_value"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fontFamily="relative"
-        android:gravity="end|center_vertical"
+        android:gravity="end|bottom"
         android:includeFontPadding="false"
         android:letterSpacing="-0.04"
+        android:paddingRight="4dp"
         android:maxLines="1"
         android:text="@string/field_empty"
         android:textColor="@color/pc_text_primary"
@@ -27,7 +26,10 @@
         android:layout_height="wrap_content"
         android:baselineAligned="false"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingTop="4dp"
+        android:paddingLeft="9dp"
+        android:paddingRight="4dp">
 
         <ImageView
             android:id="@+id/field_icon"
@@ -40,15 +42,15 @@
             android:id="@+id/field_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="ibm-plex-sans-condensed"
             android:gravity="end|center_vertical"
-            android:letterSpacing="0.04"
+            android:letterSpacing="0.05"
             android:maxLines="1"
             android:text="@string/field_label"
             android:textColor="@color/pc_text_secondary"
-            android:textSize="13sp" />
+            android:textSize="17sp" />
     </LinearLayout>
 </FrameLayout>
