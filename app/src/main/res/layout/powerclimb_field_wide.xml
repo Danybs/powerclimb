@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:paddingTop="2dp"
-    android:paddingBottom="2dp">
+    android:paddingBottom="1dp">
 
     <TextView
         android:id="@+id/field_value"
