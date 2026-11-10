@@ -1,2 +1,10 @@
 # Todos los cambios requieren revisión del owner del repositorio.
 * @Danybs
+
+# El propio CODEOWNERS y todo .github/ (workflows, plantillas, etc.)
+# solo pueden ser modificados por el owner. Las líneas específicas van
+# después de "*" porque en CODEOWNERS gana el último patrón que coincide.
+/.github/ @Danybs
+/.github/CODEOWNERS @Danybs
+/CODEOWNERS @Danybs
+/docs/CODEOWNERS @Danybs
