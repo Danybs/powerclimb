@@ -1,0 +1,71 @@
+name: CODEOWNERS guard
+
+# Se usa pull_request_target a propósito: así GitHub ejecuta la versión de este
+# workflow que vive en la rama base (main), no la de la PR. Una PR no puede
+# modificar este fichero para saltarse la comprobación.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: codeowners-guard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  codeowners-guard:
+    name: codeowners-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Verify base CODEOWNERS still protects the repository
+        run: |
+          FILE=.github/CODEOWNERS
+          if [ ! -f "$FILE" ]; then
+            echo "::error::Falta $FILE en la rama base."
+            exit 1
+          fi
+          if ! grep -Eq '^[[:space:]]*\*[[:space:]]+@Danybs([[:space:]]|$)' "$FILE"; then
+            echo "::error::El patrón '*' de $FILE debe pertenecer a @Danybs."
+            exit 1
+          fi
+          for entry in '/.github/ @Danybs' '/.github/CODEOWNERS @Danybs' '/CODEOWNERS @Danybs' '/docs/CODEOWNERS @Danybs'; do
+            if ! grep -Fq "$entry" "$FILE"; then
+              echo "::error::Falta la entrada obligatoria '$entry' en $FILE."
+              exit 1
+            fi
+          done
+
+      - name: Reject pull requests that modify CODEOWNERS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mapfile -t CHANGED < <(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename')
+
+          PROTECTED=()
+          for path in "${CHANGED[@]}"; do
+            case "$path" in
+              CODEOWNERS|.github/CODEOWNERS|docs/CODEOWNERS) PROTECTED+=("$path") ;;
+            esac
+          done
+
+          if [ "${#PROTECTED[@]}" -gt 0 ]; then
+            echo "::error::Esta PR modifica ficheros CODEOWNERS, lo cual está prohibido."
+            for path in "${PROTECTED[@]}"; do
+              echo "  - $path"
+            done
+            echo "Solo @Danybs puede cambiar CODEOWNERS, y debe hacerlo directamente en main."
+            exit 1
+          fi
+
+          echo "OK: la PR no modifica ningún CODEOWNERS."
