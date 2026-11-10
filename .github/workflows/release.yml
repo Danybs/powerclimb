@@ -3,6 +3,16 @@ name: Release
 on:
   push:
     branches: [main]
+    # Solo releases cuando cambia código que afecta al APK.
+    paths:
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
+      - ".github/workflows/release.yml"
   workflow_dispatch:
 
 permissions:
@@ -47,23 +57,73 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android SDK packages
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          set -euo pipefail
+
+          ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_HOME
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+
+          if command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER=$(command -v sdkmanager)
+          else
+            SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -name sdkmanager -type f 2>/dev/null | head -n1)
+          fi
+          if [ -z "${SDKMANAGER:-}" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::No se encontró sdkmanager en $ANDROID_HOME"
+            exit 1
+          fi
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Read app version
+      - name: Determine version
         id: version
         run: |
-          VERSION_NAME=$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts | head -n1)
-          test -n "$VERSION_NAME"
+          set -euo pipefail
+
+          BASE_VERSION=$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts | head -n1)
+          if [ -z "$BASE_VERSION" ]; then
+            echo "::error::No se pudo leer versionName de app/build.gradle.kts"
+            exit 1
+          fi
+
+          git fetch --tags --force --quiet
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            VERSION_NAME="$BASE_VERSION"
+          else
+            VERSION="${LATEST_TAG#v}"
+            MAJOR="${VERSION%%.*}"
+            REST="${VERSION#*.}"
+            MINOR="${REST%%.*}"
+            PATCH="${REST#*.}"
+            if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
+              echo "::error::El tag '$LATEST_TAG' no sigue el formato vX.Y.Z"
+              exit 1
+            fi
+            VERSION_NAME="$MAJOR.$MINOR.$((10#$PATCH + 1))"
+          fi
+
+          IFS=. read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+          VERSION_CODE=$((10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH))
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION_NAME" >/dev/null; then
+            echo "::error::El tag v$VERSION_NAME ya existe"
+            exit 1
+          fi
+
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "Release v$VERSION_NAME (versionCode $VERSION_CODE)"
 
       - name: Prepare optional private signing key
         env:
@@ -79,7 +139,10 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew test assembleRelease
+        run: |
+          ./gradlew test assembleRelease \
+            -Ppowerclimb.versionName="${{ steps.version.outputs.name }}" \
+            -Ppowerclimb.versionCode="${{ steps.version.outputs.code }}"
 
       - name: Rename and verify APK
         run: |
@@ -96,7 +159,7 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ steps.version.outputs.name }}
+          tag_name: ${{ steps.version.outputs.tag }}
           name: PowerClimb v${{ steps.version.outputs.name }}
           make_latest: true
           generate_release_notes: true

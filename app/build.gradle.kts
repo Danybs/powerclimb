@@ -6,6 +6,11 @@ plugins {
 val ciKeystore = rootProject.file("ci/powerclimb-ci.jks")
 val externalKeystore = System.getenv("RELEASE_KEYSTORE_PATH")
 
+// CI calculates the version from git tags and passes it in; local builds use
+// the defaults below.
+val ciVersionName = providers.gradleProperty("powerclimb.versionName").orNull
+val ciVersionCode = providers.gradleProperty("powerclimb.versionCode").orNull?.toIntOrNull()
+
 android {
     namespace = "com.powerclimb"
     compileSdk = 34
@@ -14,8 +19,8 @@ android {
         applicationId = "com.powerclimb"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = ciVersionCode ?: 3
+        versionName = ciVersionName ?: "0.3.0"
     }
 
     signingConfigs {

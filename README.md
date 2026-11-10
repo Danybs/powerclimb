@@ -11,7 +11,7 @@ En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. 
 
 ## Instalar desde Releases
 
-Cada push a `main` compila, firma y publica `powerclimb.apk` en [Releases](../../releases/latest).
+Cada push a `main` que toque código de la app (`app/**`, Gradle o el workflow de release) compila, firma y publica `powerclimb.apk` en [Releases](../../releases/latest). Los cambios solo de documentación no generan release.
 
 1. Descarga [powerclimb.apk](../../releases/latest/download/powerclimb.apk) desde la última release.
 2. Sideload a la Karoo por USB/ADB:
@@ -32,7 +32,7 @@ La URL directa al último APK es:
 https://github.com/<usuario>/<repo>/releases/latest/download/powerclimb.apk
 ```
 
-El workflow usa `versionName` como tag (`v0.3.0`). Para publicar una versión nueva, sube `versionCode` y `versionName` en `app/build.gradle.kts`.
+El versionado es automático: cada release parte del último tag `vX.Y.Z` y sube el patch (`v0.3.0` → `v0.3.1` → `v0.3.2`…). El `versionCode` del APK se calcula como `major * 10000 + minor * 100 + patch`, así que siempre crece y el sideload actualiza bien sin desinstalar. No hace falta tocar `app/build.gradle.kts` para publicar; para un cambio de minor o major, crea el tag a mano (`git tag v0.4.0 && git push origin v0.4.0`) antes del siguiente push.
 
 Las builds de CI se firman con la clave pública `ci/powerclimb-ci.jks` para que las actualizaciones sean instalables. Se puede sustituir por una clave privada configurando los secrets indicados en [`ci/README.md`](ci/README.md).
 
