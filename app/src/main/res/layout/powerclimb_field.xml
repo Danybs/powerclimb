@@ -4,9 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    android:paddingLeft="10dp"
     android:paddingTop="3dp"
-    android:paddingRight="10dp"
     android:paddingBottom="3dp">
 
     <TextView
@@ -14,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fontFamily="relative"
-        android:gravity="end|center_vertical"
+        android:gravity="end|bottom"
         android:includeFontPadding="false"
         android:letterSpacing="-0.04"
         android:maxLines="1"
@@ -27,7 +25,9 @@
         android:layout_height="wrap_content"
         android:baselineAligned="false"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp">
 
         <ImageView
             android:id="@+id/field_icon"

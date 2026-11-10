@@ -15,28 +15,39 @@ class ClimbPowerRemoteViewsTest {
             heightPx = 228,
             hostSize = 90f,
             digits = 3,
-            horizontalPaddingDp = 8f,
             verticalPaddingDp = 2f,
         )
 
         assertEquals(90f, size, 0.01f)
-        assertFits(size, digits = 3, widthPx = 478, heightPx = 228, 8f, 2f)
+        assertFits(size, digits = 3, widthPx = 478, heightPx = 228, 2f)
     }
 
     @Test
-    fun `one by one is limited by width`() {
+    fun `one by one uses the same host size as the native field`() {
         val size = fitted(
             widthPx = 240,
             heightPx = 228,
             hostSize = 90f,
             digits = 3,
-            horizontalPaddingDp = 8f,
             verticalPaddingDp = 2f,
         )
 
-        assertTrue("1x1 should be smaller than the host size", size < 90f)
-        assertTrue("1x1 should stay above 78 sp", size > 78f)
-        assertFits(size, digits = 3, widthPx = 240, heightPx = 228, 8f, 2f)
+        assertEquals(90f, size, 0.01f)
+        assertFits(size, digits = 3, widthPx = 240, heightPx = 228, 2f)
+    }
+
+    @Test
+    fun `one by one keeps the host size when it is half a page tall`() {
+        val size = fitted(
+            widthPx = 240,
+            heightPx = 321,
+            hostSize = 80f,
+            digits = 3,
+            verticalPaddingDp = 2f,
+        )
+
+        assertEquals(80f, size, 0.01f)
+        assertFits(size, digits = 3, widthPx = 240, heightPx = 321, 2f)
     }
 
     @Test
@@ -46,12 +57,11 @@ class ClimbPowerRemoteViewsTest {
             heightPx = 456,
             hostSize = 90f,
             digits = 3,
-            horizontalPaddingDp = 8f,
             verticalPaddingDp = 2f,
         )
 
-        assertTrue("tall field is still width-limited", size < 90f)
-        assertFits(size, digits = 3, widthPx = 240, heightPx = 456, 8f, 2f)
+        assertEquals(90f, size, 0.01f)
+        assertFits(size, digits = 3, widthPx = 240, heightPx = 456, 2f)
     }
 
     @Test
@@ -61,12 +71,11 @@ class ClimbPowerRemoteViewsTest {
             heightPx = 228,
             hostSize = 90f,
             digits = 4,
-            horizontalPaddingDp = 8f,
             verticalPaddingDp = 2f,
         )
 
-        assertTrue("four digits must be smaller than three", size < 65f)
-        assertFits(size, digits = 4, widthPx = 240, heightPx = 228, 8f, 2f)
+        assertTrue("four digits must be smaller than three", size < 70f)
+        assertFits(size, digits = 4, widthPx = 240, heightPx = 228, 2f)
     }
 
     @Test
@@ -76,12 +85,11 @@ class ClimbPowerRemoteViewsTest {
             heightPx = 456,
             hostSize = 120f,
             digits = 3,
-            horizontalPaddingDp = 10f,
             verticalPaddingDp = 3f,
         )
 
         assertEquals(120f, size, 0.01f)
-        assertFits(size, digits = 3, widthPx = 478, heightPx = 456, 10f, 3f)
+        assertFits(size, digits = 3, widthPx = 478, heightPx = 456, 3f)
     }
 
     @Test
@@ -91,12 +99,11 @@ class ClimbPowerRemoteViewsTest {
             heightPx = 128,
             hostSize = 41f,
             digits = 3,
-            horizontalPaddingDp = 8f,
             verticalPaddingDp = 2f,
         )
 
         assertEquals(41f, size, 0.01f)
-        assertFits(size, digits = 3, widthPx = 240, heightPx = 128, 8f, 2f)
+        assertFits(size, digits = 3, widthPx = 240, heightPx = 128, 2f)
     }
 
     private fun fitted(
@@ -104,7 +111,6 @@ class ClimbPowerRemoteViewsTest {
         heightPx: Int,
         hostSize: Float,
         digits: Int,
-        horizontalPaddingDp: Float,
         verticalPaddingDp: Float,
     ): Float {
         return ClimbPowerRemoteViews.fittedValueSp(
@@ -114,7 +120,6 @@ class ClimbPowerRemoteViewsTest {
             density = density,
             scaledDensity = density,
             digits = digits,
-            horizontalPaddingDp = horizontalPaddingDp,
             verticalPaddingDp = verticalPaddingDp,
         )
     }
@@ -124,18 +129,16 @@ class ClimbPowerRemoteViewsTest {
         digits: Int,
         widthPx: Int,
         heightPx: Int,
-        horizontalPaddingDp: Float,
         verticalPaddingDp: Float,
     ) {
         val widthEm = 0.5f * digits - 0.04f * (digits - 1)
         val textWidthPx = widthEm * sizeSp * density
         val inkHeightPx = 0.78f * sizeSp * density
-        val availableWidth = widthPx - 2f * horizontalPaddingDp * density
         val availableHeight = heightPx - 2f * verticalPaddingDp * density
 
         assertTrue(
-            "text width $textWidthPx must fit in $availableWidth",
-            textWidthPx <= availableWidth + 0.1f,
+            "text width $textWidthPx must fit in $widthPx",
+            textWidthPx <= widthPx + 0.1f,
         )
         assertTrue(
             "ink height $inkHeightPx must fit in $availableHeight",

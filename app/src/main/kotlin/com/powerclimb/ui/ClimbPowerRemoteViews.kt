@@ -118,7 +118,6 @@ object ClimbPowerRemoteViews {
             density = density,
             scaledDensity = scaledDensity,
             digits = digits,
-            horizontalPaddingDp = if (compact) 8f else 10f,
             verticalPaddingDp = if (compact) 2f else 3f,
         )
     }
@@ -128,6 +127,11 @@ object ClimbPowerRemoteViews {
      * advances exactly 0.5 em and the ink of a digit is 0.72 em high. Using
      * those metrics lets us fill the slot without clipping, for every field
      * size, instead of relying on one fixed text size.
+     *
+     * The value spans the full width of the field, like the native numeric
+     * fields; only the vertical padding reduces the available height. This
+     * keeps [hostTextSize] as the size for three-digit values instead of
+     * shrinking them for padding that belongs to the label row.
      */
     internal fun fittedValueSp(
         viewWidthPx: Int,
@@ -136,7 +140,6 @@ object ClimbPowerRemoteViews {
         density: Float,
         scaledDensity: Float,
         digits: Int,
-        horizontalPaddingDp: Float,
         verticalPaddingDp: Float,
     ): Float {
         val safeDensity = density.takeIf { it > 0f } ?: 1f
@@ -146,8 +149,7 @@ object ClimbPowerRemoteViews {
         // Digits advance 0.5 em; letterSpacing is -0.04 em between glyphs.
         val widthEm = 0.5f * safeDigits - 0.04f * (safeDigits - 1)
 
-        val widthPx = (viewWidthPx - 2f * horizontalPaddingDp * safeDensity)
-            .coerceAtLeast(1f)
+        val widthPx = viewWidthPx.coerceAtLeast(1)
         val heightPx = (viewHeightPx - 2f * verticalPaddingDp * safeDensity)
             .coerceAtLeast(1f)
 

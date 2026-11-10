@@ -7,7 +7,7 @@ Dos campos de datos gráficos para la Hammerhead Karoo 3 que muestran la **poten
 
 La presentación es minimalista y transparente, con tipografías y colores nativos. En el modo numérico el color del texto y del icono se adapta al tema claro u oscuro de la Karoo. El modo de zonas usa el color de la zona como fondo y elige texto negro o blanco para mantener el contraste.
 
-En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. El tamaño del número se calcula para cada hueco (1x1, 1x2, 2x1 y 2x2) usando las métricas de la fuente numérica nativa, de modo que sea lo más grande posible sin recortarse.
+En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. El número usa el tamaño nativo del hueco (`ViewConfig.textSize`), se alinea a la derecha y abajo como los campos numéricos de la Karoo y ocupa todo el ancho del campo. Solo se reduce si un valor de cuatro o más dígitos no cabe en el ancho disponible.
 
 ## Instalar desde Releases
 
