@@ -26,8 +26,9 @@
         android:baselineAligned="false"
         android:gravity="center_vertical"
         android:orientation="horizontal"
+        android:paddingTop="6dp"
         android:paddingLeft="10dp"
-        android:paddingRight="10dp">
+        android:paddingRight="0dp">
 
         <ImageView
             android:id="@+id/field_icon"
