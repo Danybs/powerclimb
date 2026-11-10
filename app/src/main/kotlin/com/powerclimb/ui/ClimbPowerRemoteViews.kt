@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import android.util.TypedValue
 import android.view.View
-import android.widget.LinearLayout
 import android.widget.RemoteViews
 import com.powerclimb.R
 import com.powerclimb.data.ClimbPowerState
@@ -37,13 +36,18 @@ object ClimbPowerRemoteViews {
     )
 
     fun isCompact(config: ViewConfig): Boolean {
-        return config.viewSize.first < 280 || config.viewSize.second < 220
+        // A single-row field is 20 grid rows high; a 2x2 field is 40. Using
+        // the grid height keeps a 478x228 2x1 field on the compact layout
+        // instead of the much larger 2x2 presentation.
+        return config.gridSize.second < 30 || config.viewSize.first < 280
     }
 
     fun isWide(config: ViewConfig): Boolean {
         // Total grid width is 60 columns. A 2-column-wide field spans at least
-        // 50, while the compact 1x1 field does not.
-        return config.gridSize.first >= 50
+        // 50. The picker preview is 240x128 and also needs the horizontal
+        // ball-and-dots arrangement.
+        return config.gridSize.first >= 50 ||
+            config.viewSize.first >= config.viewSize.second * 1.5f
     }
 
     fun build(
@@ -55,10 +59,10 @@ object ClimbPowerRemoteViews {
         compact: Boolean,
         wide: Boolean,
     ): RemoteViews {
-        val layout = if (compact) {
-            R.layout.powerclimb_field_compact
-        } else {
-            R.layout.powerclimb_field
+        val layout = when {
+            compact && wide -> R.layout.powerclimb_field_wide
+            compact -> R.layout.powerclimb_field_compact
+            else -> R.layout.powerclimb_field
         }
         val views = RemoteViews(context.packageName, layout)
 
@@ -112,11 +116,6 @@ object ClimbPowerRemoteViews {
         val visual = mode == ClimbFieldMode.VISUAL
         views.setViewVisibility(R.id.field_value, if (visual) View.GONE else View.VISIBLE)
         views.setViewVisibility(R.id.field_visual, if (visual) View.VISIBLE else View.GONE)
-        views.setInt(
-            R.id.field_visual,
-            "setOrientation",
-            if (wide || !compact) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL,
-        )
 
         views.setInt(
             R.id.field_ring,
@@ -144,6 +143,9 @@ object ClimbPowerRemoteViews {
     }
 
     private fun valueSize(config: ViewConfig, value: String, compact: Boolean): Float {
+        // The host's textSize is the size the native fields use for this slot.
+        // Keeping it (instead of an artificial compact cap) makes the value
+        // fill the available height like 3S POWER.
         val base = config.textSize
             .takeIf { it > 0 }
             ?.toFloat()
@@ -151,7 +153,7 @@ object ClimbPowerRemoteViews {
         val adjusted = if (value.length >= 4) base * 0.82f else base
         return adjusted.coerceIn(
             minimumValue = if (compact) 24f else 36f,
-            maximumValue = if (compact) 52f else 84f,
+            maximumValue = if (compact) 80f else 96f,
         )
     }
 

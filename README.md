@@ -17,7 +17,9 @@ La presentación es minimalista y transparente, con tipografías y colores nativ
 - Mantiene la media acumulada aunque cambies de página mientras la subida sigue activa. El tracker vive en el servicio de la extensión, no en la vista.
 - Al coronar, congela la media final y **la conserva** después de terminar la subida o la ruta.
 - Reinicia el valor al empezar la siguiente subida o una ruta nueva.
-- Muestra `—` únicamente cuando no hay ningún valor que mostrar.
+- Muestra `--` únicamente cuando no hay ningún valor que mostrar. La fuente
+  numérica nativa (`Relative`) no incluye el guion largo; dos guiones reproducen
+  el mismo hueco visual y coinciden con los placeholders de los campos nativos.
 - No muestra tiempo, potencia actual, unidad `W`, insignia de subida ni línea secundaria. El reloj real se mantiene internamente para los futuros campos de tiempo, NP, pulso y cadencia.
 
 ## Las tres variantes
@@ -131,7 +133,7 @@ Pruebas mínimas:
 6. **Pausa**: pausar la ruta, comprobar que la media se congela, reanudar y comprobar que continúa.
 7. **Fin de subida**: coronar y comprobar que el valor final se queda visible, sin etiqueta `FIN`.
 8. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
-9. **Ruta nueva**: terminar la ruta, comprobar que el último valor sigue visible y que al iniciar otra ruta aparece `—`.
+9. **Ruta nueva**: terminar la ruta, comprobar que el último valor sigue visible y que al iniciar otra ruta aparece `--`.
 10. **Idioma**: con la Karoo en español deben aparecer `POT. SUBIDA`, `Pot. Subida Visual` y `Pot. Subida Zonas`; en inglés, `CLIMB POWER` y los nombres equivalentes.
 11. **Sin zonas**: probar un perfil sin zonas de potencia; no debe aparecer ningún color inventado.
 
@@ -155,7 +157,7 @@ El simulador:
 - Genera potencia a 1 Hz con una rampa de 200 W a 257 W, en pasos de 3 W.
 - Pausa y reanuda igual que una ruta real, congelando la media.
 - Al terminar envía una señal explícita a cero; el estado final aparece tras unos 2 segundos y el valor se conserva.
-- `reset` vuelve a `—` y libera los streams nativos.
+- `reset` vuelve a `--` y libera los streams nativos.
 - Mientras está activo ignora los streams nativos para que no mezclen datos. Unos 3 segundos después de `finish` vuelve a escucharlos.
 
 El receptor solo se declara en `src/debug/AndroidManifest.xml`, así que no existe en un build release. Para ver el campo durante la simulación, ponlo también en una página de datos normal (por ejemplo, la página 2): la pantalla nativa del Climber no se abre con datos simulados porque la controla Karoo al detectar una subida real.
