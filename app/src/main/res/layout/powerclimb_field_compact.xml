@@ -1,19 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/field_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
-    android:paddingLeft="7dp"
-    android:paddingTop="4dp"
-    android:paddingRight="7dp"
-    android:paddingBottom="4dp">
+    android:paddingLeft="8dp"
+    android:paddingTop="2dp"
+    android:paddingRight="8dp"
+    android:paddingBottom="2dp">
+
+    <TextView
+        android:id="@+id/field_value"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fontFamily="relative"
+        android:gravity="end|center_vertical"
+        android:includeFontPadding="false"
+        android:letterSpacing="-0.04"
+        android:maxLines="1"
+        android:text="@string/field_empty"
+        android:textColor="@color/pc_text_primary"
+        android:textSize="60sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:baselineAligned="false"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -28,172 +40,15 @@
             android:id="@+id/field_label"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="ibm-plex-sans-condensed"
-            android:gravity="start|center_vertical"
+            android:gravity="end|center_vertical"
             android:letterSpacing="0.04"
             android:maxLines="1"
             android:text="@string/field_label"
             android:textColor="@color/pc_text_secondary"
             android:textSize="13sp" />
     </LinearLayout>
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <TextView
-            android:id="@+id/field_value"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fontFamily="relative"
-            android:gravity="end|center_vertical"
-            android:includeFontPadding="false"
-            android:letterSpacing="-0.04"
-            android:maxLines="1"
-            android:text="@string/field_empty"
-            android:textColor="@color/pc_text_primary"
-            android:textSize="38sp" />
-
-        <LinearLayout
-            android:id="@+id/field_visual"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:baselineAligned="false"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <FrameLayout
-                android:id="@+id/field_ball"
-                android:layout_width="54dp"
-                android:layout_height="54dp"
-                android:layout_marginEnd="4dp">
-
-                <ImageView
-                    android:id="@+id/field_ring"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_ring" />
-
-                <TextView
-                    android:id="@+id/field_ball_value"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:fontFamily="relative"
-                    android:gravity="center"
-                    android:includeFontPadding="false"
-                    android:letterSpacing="-0.04"
-                    android:maxLines="1"
-                    android:text="@string/field_empty"
-                    android:textColor="@color/pc_text_primary"
-                    android:textSize="22sp" />
-
-            </FrameLayout>
-
-            <LinearLayout
-                android:id="@+id/field_dots"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:id="@+id/field_dot_1"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_2"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_3"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_4"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_5"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_6"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_7"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_8"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_9"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:layout_marginEnd="1dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-
-                <ImageView
-                    android:id="@+id/field_dot_10"
-                    android:layout_width="5dp"
-                    android:layout_height="5dp"
-                    android:contentDescription="@null"
-                    android:scaleType="fitXY"
-                    android:src="@drawable/pc_dot" />
-            </LinearLayout>
-        </LinearLayout>
-    </FrameLayout>
-
-</LinearLayout>
+</FrameLayout>

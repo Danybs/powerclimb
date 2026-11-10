@@ -1,12 +1,13 @@
 # PowerClimb
 
-Tres campos de datos gráficos para la Hammerhead Karoo 3 que muestran la **potencia media ponderada por tiempo de la subida activa del Climber nativo**:
+Dos campos de datos gráficos para la Hammerhead Karoo 3 que muestran la **potencia media ponderada por tiempo de la subida activa del Climber nativo**:
 
 - **Climb Power** / `Pot. Subida`: número grande alineado a la derecha.
-- **Climb Power Visual** / `Pot. Subida Visual`: anillo circular con una bolita por zona de potencia del dispositivo y el número centrado.
 - **Climb Power Zones** / `Pot. Subida Zonas`: el mismo número sobre el color de la zona de potencia media.
 
-La presentación es minimalista y transparente, con tipografías y colores nativos. En los modos numérico y visual el color del texto y del icono se adapta al tema claro u oscuro de la Karoo. El modo de zonas usa el color de la zona como fondo y elige texto negro o blanco para mantener el contraste.
+La presentación es minimalista y transparente, con tipografías y colores nativos. En el modo numérico el color del texto y del icono se adapta al tema claro u oscuro de la Karoo. El modo de zonas usa el color de la zona como fondo y elige texto negro o blanco para mantener el contraste.
+
+En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. El tamaño del número se calcula para cada hueco (1x1, 1x2, 2x1 y 2x2) usando las métricas de la fuente numérica nativa, de modo que sea lo más grande posible sin recortarse.
 
 ## Qué hace
 
@@ -22,21 +23,13 @@ La presentación es minimalista y transparente, con tipografías y colores nativ
   el mismo hueco visual y coinciden con los placeholders de los campos nativos.
 - No muestra tiempo, potencia actual, unidad `W`, insignia de subida ni línea secundaria. El reloj real se mantiene internamente para los futuros campos de tiempo, NP, pulso y cadencia.
 
-## Las tres variantes
+## Las dos variantes
 
 ### Numérica
 
 - Etiqueta `CLIMB POWER` / `POT. SUBIDA` con icono de rayo y montaña.
 - Media en vatios, alineada a la derecha.
 - Fondo transparente y texto/icono según el tema.
-
-### Visual
-
-- Anillo del color de la zona media.
-- Una bolita por cada zona configurada en la Karoo; la zona activa se resalta y las demás quedan atenuadas.
-- Media centrada dentro del anillo.
-- Fondo transparente y texto/icono según el tema.
-- En 1x1 las bolitas van debajo de la bolita; en 2x1 y 2x2 van al lado.
 
 ### Zonas
 
@@ -48,7 +41,7 @@ Los límites y el número de zonas se leen de `UserProfile.powerZones` del dispo
 
 ## Estado del proyecto
 
-Versión `0.2.0`.
+Versión `0.3.0`.
 
 - Media **ponderada por tiempo**.
 - Los ceros de potencia cuentan mientras haya señal y la ruta no esté pausada.
@@ -100,8 +93,8 @@ Después, en la Karoo:
 
 1. Abre los ajustes de perfiles/páginas.
 2. Edita una página y añade un campo de datos.
-3. Busca `PowerClimb` y elige una de las tres variantes.
-4. Ajusta el tamaño del campo. El diseño tiene variante compacta 1x1 y variantes 2x1/2x2.
+3. Busca `PowerClimb` y elige una de las dos variantes.
+4. Ajusta el tamaño del campo. El diseño se adapta a 1x1, 1x2, 2x1 y 2x2.
 
 No hay app de ajustes: la variante se elige en el selector de campos de datos de la Karoo.
 
@@ -126,15 +119,15 @@ Durante una ruta con una subida:
 Pruebas mínimas:
 
 1. **Media real**: comparar la media mostrada con la potencia media del lap de la subida o con `Last Lap Power`.
-2. **Tres variantes**: añadir los tres campos y comprobar número, anillo/bolitas y fondo de zona.
-3. **Tamaños**: comprobar 1x1, 2x1 y 2x2; la etiqueta debe caber y el número no debe recortarse.
-4. **Tema claro/oscuro**: en numérico y visual el texto y el icono deben invertirse; en zonas debe mantenerse el contraste sobre el color.
+2. **Dos variantes**: añadir los dos campos y comprobar número y fondo de zona.
+3. **Tamaños**: comprobar 1x1, 1x2, 2x1 y 2x2; la etiqueta debe quedar a la derecha y el número no debe recortarse.
+4. **Tema claro/oscuro**: en numérico el texto y el icono deben invertirse; en zonas debe mantenerse el contraste sobre el color.
 5. **Cambio de página**: cambiar a otra página y volver. La media debe seguir subiendo y los logs deben seguir llegando.
 6. **Pausa**: pausar la ruta, comprobar que la media se congela, reanudar y comprobar que continúa.
 7. **Fin de subida**: coronar y comprobar que el valor final se queda visible, sin etiqueta `FIN`.
 8. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
 9. **Ruta nueva**: terminar la ruta, comprobar que el último valor sigue visible y que al iniciar otra ruta aparece `--`.
-10. **Idioma**: con la Karoo en español deben aparecer `POT. SUBIDA`, `Pot. Subida Visual` y `Pot. Subida Zonas`; en inglés, `CLIMB POWER` y los nombres equivalentes.
+10. **Idioma**: con la Karoo en español deben aparecer `POT. SUBIDA` y `Pot. Subida Zonas`; en inglés, `CLIMB POWER` y `Climb Power Zones`.
 11. **Sin zonas**: probar un perfil sin zonas de potencia; no debe aparecer ningún color inventado.
 
 La pantalla nativa del Climber solo se abre en una subida real. La simulación sirve para validar los estados en una página de datos normal.
@@ -198,7 +191,7 @@ Detalles:
 ```text
 app/src/main/kotlin/com/powerclimb/
 ├── PowerClimbExtension.kt        Servicio de la extensión y conexión con Karoo
-├── ClimbAvgPowerDataType.kt     Data type gráfico compartido por las tres variantes
+├── ClimbAvgPowerDataType.kt     Data type gráfico compartido por las dos variantes
 ├── data/
 │   ├── ClimbMonitor.kt          Streams nativos, estado de ruta y perfil
 │   ├── ClimbSessionTracker.kt   Máquina de estados, media y reloj interno
@@ -207,7 +200,7 @@ app/src/main/kotlin/com/powerclimb/
 │   ├── DebugClimbBridge.kt      Puente entre el receptor debug y el monitor
 │   └── DebugClimbReceiver.kt    Receptor del simulador (solo build debug)
 └── ui/
-    ├── ClimbFieldMode.kt        Modos numérico, visual y zonas
+    ├── ClimbFieldMode.kt        Modos numérico y zonas
     ├── ClimbPowerRemoteViews.kt Renderizado RemoteViews
     └── PowerZonePalette.kt      Paleta y contraste nativos
 

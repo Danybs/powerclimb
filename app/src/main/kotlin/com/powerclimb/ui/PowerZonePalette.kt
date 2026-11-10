@@ -25,10 +25,6 @@ object PowerZonePalette {
         return colors[zoneIndex.mod(colors.size)]
     }
 
-    fun contrastFor(zoneIndex: Int): Int {
-        return contrastForColor(colorFor(zoneIndex))
-    }
-
     fun contrastForColor(color: Int): Int {
         val red = Color.red(color) / 255f
         val green = Color.green(color) / 255f

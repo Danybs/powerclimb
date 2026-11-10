@@ -48,7 +48,6 @@ class PowerClimbExtension : KarooExtension(EXTENSION_ID, BuildConfig.VERSION_NAM
     override val types by lazy {
         listOf(
             ClimbAvgPowerDataType(this, ClimbFieldMode.NUMERIC),
-            ClimbAvgPowerDataType(this, ClimbFieldMode.VISUAL),
             ClimbAvgPowerDataType(this, ClimbFieldMode.ZONE),
         )
     }

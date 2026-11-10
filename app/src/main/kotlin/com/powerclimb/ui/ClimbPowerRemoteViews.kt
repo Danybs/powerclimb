@@ -3,7 +3,6 @@ package com.powerclimb.ui
 import android.content.Context
 import android.graphics.Color
 import android.util.TypedValue
-import android.view.View
 import android.widget.RemoteViews
 import com.powerclimb.R
 import com.powerclimb.data.ClimbPowerState
@@ -11,19 +10,6 @@ import com.powerclimb.data.PowerZoneProfile
 import io.hammerhead.karooext.models.ViewConfig
 
 object ClimbPowerRemoteViews {
-
-    private val dotIds = intArrayOf(
-        R.id.field_dot_1,
-        R.id.field_dot_2,
-        R.id.field_dot_3,
-        R.id.field_dot_4,
-        R.id.field_dot_5,
-        R.id.field_dot_6,
-        R.id.field_dot_7,
-        R.id.field_dot_8,
-        R.id.field_dot_9,
-        R.id.field_dot_10,
-    )
 
     private val zoneBackgrounds = intArrayOf(
         R.drawable.pc_zone_bg_1,
@@ -45,7 +31,7 @@ object ClimbPowerRemoteViews {
     fun isWide(config: ViewConfig): Boolean {
         // Total grid width is 60 columns. A 2-column-wide field spans at least
         // 50. The picker preview is 240x128 and also needs the horizontal
-        // ball-and-dots arrangement.
+        // presentation.
         return config.gridSize.first >= 50 ||
             config.viewSize.first >= config.viewSize.second * 1.5f
     }
@@ -102,69 +88,73 @@ object ClimbPowerRemoteViews {
         views.setTextViewTextSize(
             R.id.field_value,
             TypedValue.COMPLEX_UNIT_SP,
-            valueSize(config, valueText, compact),
+            valueSize(context, config, valueText, compact),
         )
-
-        views.setTextViewText(R.id.field_ball_value, valueText)
-        views.setTextColor(R.id.field_ball_value, if (hasValue) primary else secondary)
-        views.setTextViewTextSize(
-            R.id.field_ball_value,
-            TypedValue.COMPLEX_UNIT_SP,
-            ballValueSize(config, compact),
-        )
-
-        val visual = mode == ClimbFieldMode.VISUAL
-        views.setViewVisibility(R.id.field_value, if (visual) View.GONE else View.VISIBLE)
-        views.setViewVisibility(R.id.field_visual, if (visual) View.VISIBLE else View.GONE)
-
-        views.setInt(
-            R.id.field_ring,
-            "setColorFilter",
-            zoneColor ?: context.getColor(R.color.pc_ring_neutral),
-        )
-
-        val zoneCount = zones.zones.size.coerceAtMost(dotIds.size)
-        dotIds.forEachIndexed { dotIndex, dotId ->
-            if (dotIndex < zoneCount) {
-                views.setViewVisibility(dotId, View.VISIBLE)
-                views.setInt(dotId, "setColorFilter", PowerZonePalette.colorFor(dotIndex))
-                val alpha = when {
-                    zone == null -> 0.22f
-                    zone.index == dotIndex -> 1f
-                    else -> 0.30f
-                }
-                views.setFloat(dotId, "setAlpha", alpha)
-            } else {
-                views.setViewVisibility(dotId, View.GONE)
-            }
-        }
 
         return views
     }
 
-    private fun valueSize(config: ViewConfig, value: String, compact: Boolean): Float {
-        // The host's textSize is the size the native fields use for this slot.
-        // Keeping it (instead of an artificial compact cap) makes the value
-        // fill the available height like 3S POWER.
-        val base = config.textSize
-            .takeIf { it > 0 }
-            ?.toFloat()
-            ?: if (compact) 38f else 64f
-        val adjusted = if (value.length >= 4) base * 0.82f else base
-        return adjusted.coerceIn(
-            minimumValue = if (compact) 24f else 36f,
-            maximumValue = if (compact) 80f else 96f,
+    private fun valueSize(
+        context: Context,
+        config: ViewConfig,
+        value: String,
+        compact: Boolean,
+    ): Float {
+        val metrics = context.resources.displayMetrics
+        val density = metrics.density.takeIf { it > 0f } ?: 1f
+        val scaledDensity = TypedValue
+            .applyDimension(TypedValue.COMPLEX_UNIT_SP, 1f, metrics)
+            .takeIf { it > 0f }
+            ?: density
+
+        // Empty values use the width of a typical three-digit value so the
+        // placeholder does not suddenly become huge.
+        val digits = value.count { it.isDigit() }.takeIf { it > 0 } ?: 3
+
+        return fittedValueSp(
+            viewWidthPx = config.viewSize.first,
+            viewHeightPx = config.viewSize.second,
+            hostTextSize = config.textSize.takeIf { it > 0 }?.toFloat() ?: 64f,
+            density = density,
+            scaledDensity = scaledDensity,
+            digits = digits,
+            horizontalPaddingDp = if (compact) 8f else 10f,
+            verticalPaddingDp = if (compact) 2f else 3f,
         )
     }
 
-    private fun ballValueSize(config: ViewConfig, compact: Boolean): Float {
-        val base = config.textSize
-            .takeIf { it > 0 }
-            ?.toFloat()
-            ?: if (compact) 38f else 64f
-        return (base * 0.56f).coerceIn(
-            minimumValue = 20f,
-            maximumValue = if (compact) 30f else 42f,
-        )
+    /**
+     * The numeric font (Hammerhead Relative) is monospaced: every digit
+     * advances exactly 0.5 em and the ink of a digit is 0.72 em high. Using
+     * those metrics lets us fill the slot without clipping, for every field
+     * size, instead of relying on one fixed text size.
+     */
+    internal fun fittedValueSp(
+        viewWidthPx: Int,
+        viewHeightPx: Int,
+        hostTextSize: Float,
+        density: Float,
+        scaledDensity: Float,
+        digits: Int,
+        horizontalPaddingDp: Float,
+        verticalPaddingDp: Float,
+    ): Float {
+        val safeDensity = density.takeIf { it > 0f } ?: 1f
+        val safeScaledDensity = scaledDensity.takeIf { it > 0f } ?: safeDensity
+        val safeDigits = digits.coerceAtLeast(1)
+
+        // Digits advance 0.5 em; letterSpacing is -0.04 em between glyphs.
+        val widthEm = 0.5f * safeDigits - 0.04f * (safeDigits - 1)
+
+        val widthPx = (viewWidthPx - 2f * horizontalPaddingDp * safeDensity)
+            .coerceAtLeast(1f)
+        val heightPx = (viewHeightPx - 2f * verticalPaddingDp * safeDensity)
+            .coerceAtLeast(1f)
+
+        val widthLimitSp = widthPx / (widthEm * safeScaledDensity)
+        val heightLimitSp = heightPx / (0.78f * safeScaledDensity)
+
+        return minOf(hostTextSize, widthLimitSp, heightLimitSp)
+            .coerceIn(18f, 200f)
     }
 }

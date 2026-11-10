@@ -4,11 +4,9 @@
     <string name="extension_name">PowerClimb</string>
 
     <string name="datatype_name_numeric">Climb Power</string>
-    <string name="datatype_name_visual">Climb Power Visual</string>
     <string name="datatype_name_zone">Climb Power Zones</string>
 
     <string name="datatype_description_numeric">Time-weighted average power of the active native Climber climb</string>
-    <string name="datatype_description_visual">Circular power-zone visual with the time-weighted average of the active native Climber climb</string>
     <string name="datatype_description_zone">Power-zone background with the time-weighted average of the active native Climber climb</string>
 
     <string name="field_label">CLIMB POWER</string>

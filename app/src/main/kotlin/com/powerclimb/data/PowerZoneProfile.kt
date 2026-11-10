@@ -42,8 +42,8 @@ data class PowerZoneProfile(
 
         /**
          * Deterministic preview used in the Karoo field editor. It mirrors a
-         * typical seven-zone setup so the visual and zone-color variants can be
-         * inspected before a ride.
+         * typical seven-zone setup so the zone-color variant can be inspected
+         * before a ride.
          */
         val PREVIEW = PowerZoneProfile(
             listOf(
