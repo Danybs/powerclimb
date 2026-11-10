@@ -65,7 +65,7 @@ No es un fork del repositorio: es una app independiente construida sobre su API 
 
 ### Numérica
 
-- Etiqueta `CLIMB POWER` / `POT. SUBIDA` con icono de rayo y montaña.
+- Etiqueta `C.POWER` con icono de rayo y montaña.
 - Media en vatios, alineada a la derecha.
 - Fondo transparente y texto/icono según el tema.
 
@@ -172,7 +172,7 @@ Pruebas mínimas:
 7. **Fin de subida**: coronar y comprobar que el valor final se queda visible, sin etiqueta `FIN`.
 8. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
 9. **Ruta nueva**: terminar la ruta, comprobar que el último valor sigue visible y que al iniciar otra ruta aparece `--`.
-10. **Idioma**: con la Karoo en español deben aparecer `POT. SUBIDA` y `Pot. Subida Zonas`; en inglés, `CLIMB POWER` y `Climb Power Zones`.
+10. **Idioma**: con la Karoo en español deben aparecer `C.POWER` y `Pot. Subida Zonas`; en inglés, `C.POWER` y `Climb Power Zones`.
 11. **Sin zonas**: probar un perfil sin zonas de potencia; no debe aparecer ningún color inventado.
 
 La pantalla nativa del Climber solo se abre en una subida real. La simulación sirve para validar los estados en una página de datos normal.

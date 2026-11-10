@@ -15,6 +15,7 @@
         android:gravity="end|bottom"
         android:includeFontPadding="false"
         android:letterSpacing="-0.04"
+        android:paddingRight="4dp"
         android:maxLines="1"
         android:text="@string/field_empty"
         android:textColor="@color/pc_text_primary"
@@ -26,9 +27,9 @@
         android:baselineAligned="false"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingTop="6dp"
+        android:paddingTop="4dp"
         android:paddingLeft="10dp"
-        android:paddingRight="0dp">
+        android:paddingRight="4dp">
 
         <ImageView
             android:id="@+id/field_icon"
@@ -50,6 +51,6 @@
             android:maxLines="1"
             android:text="@string/field_label"
             android:textColor="@color/pc_text_secondary"
-            android:textSize="15sp" />
+            android:textSize="17sp" />
     </LinearLayout>
 </FrameLayout>

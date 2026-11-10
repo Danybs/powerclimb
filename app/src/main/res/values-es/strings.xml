@@ -9,6 +9,6 @@
     <string name="datatype_description_numeric">Potencia media ponderada por tiempo de la subida activa del Climber nativo</string>
     <string name="datatype_description_zone">Fondo del color de la zona de potencia con la media ponderada por tiempo de la subida activa del Climber nativo</string>
 
-    <string name="field_label">POT. SUBIDA</string>
+    <string name="field_label">C.POWER</string>
     <string name="field_empty">--</string>
 </resources>
