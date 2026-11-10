@@ -2,6 +2,10 @@ package com.powerclimb.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
+import android.os.Build
 import android.util.TypedValue
 import android.widget.RemoteViews
 import com.powerclimb.R
@@ -80,18 +84,53 @@ object ClimbPowerRemoteViews {
         }
 
         views.setTextViewText(R.id.field_label, context.getString(R.string.field_label))
-        views.setTextColor(R.id.field_label, secondary)
+        views.setTextColor(R.id.field_label, primary)
         views.setInt(R.id.field_icon, "setColorFilter", primary)
 
+        val valueSp = valueSize(context, config, valueText, compact)
         views.setTextViewText(R.id.field_value, valueText)
         views.setTextColor(R.id.field_value, if (hasValue) primary else secondary)
         views.setTextViewTextSize(
             R.id.field_value,
             TypedValue.COMPLEX_UNIT_SP,
-            valueSize(context, config, valueText, compact),
+            valueSp,
         )
+        setValueBottomMargin(views, valueSp, context)
 
         return views
+    }
+
+    /**
+     * Native numeric fields sit almost flush with the bottom of the slot. A
+     * bottom-gravity [TextView] leaves the font descent as a gap below the
+     * digits, so move the value down by that descent (minus the digit's own
+     * bottom overshoot). The root padding still provides the final margin.
+     */
+    private fun setValueBottomMargin(
+        views: RemoteViews,
+        valueSp: Float,
+        context: Context,
+    ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+
+        val scaledDensity = TypedValue
+            .applyDimension(TypedValue.COMPLEX_UNIT_SP, 1f, context.resources.displayMetrics)
+            .takeIf { it > 0f }
+            ?: 1f
+        val paint = Paint().apply {
+            typeface = Typeface.create("relative", Typeface.NORMAL)
+            textSize = valueSp * scaledDensity
+        }
+        val digitBounds = Rect()
+        paint.getTextBounds("0", 0, 1, digitBounds)
+        val insetPx = (paint.fontMetrics.descent - digitBounds.bottom).coerceAtLeast(0f)
+
+        views.setViewLayoutMargin(
+            R.id.field_value,
+            RemoteViews.MARGIN_BOTTOM,
+            -insetPx,
+            TypedValue.COMPLEX_UNIT_PX,
+        )
     }
 
     private fun valueSize(
