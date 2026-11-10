@@ -11,10 +11,29 @@ fun envOrNull(name: String): String? = System.getenv(name)?.takeIf { it.isNotBla
 
 val externalKeystore = envOrNull("RELEASE_KEYSTORE_PATH")
 
-// CI calculates the version from git tags and passes it in; local builds use
-// the defaults below.
-val ciVersionName = providers.gradleProperty("powerclimb.versionName").orNull
-val ciVersionCode = providers.gradleProperty("powerclimb.versionCode").orNull?.toIntOrNull()
+// Versión: CI la calcula desde los tags de git y la inyecta con -P. En CI es
+// obligatoria a propósito: preferimos que el build falle antes que publicar
+// una versión por defecto que ya existe como tag.
+val injectedVersionName = providers.gradleProperty("powerclimb.versionName").orNull
+val injectedVersionCode = providers.gradleProperty("powerclimb.versionCode").orNull?.toIntOrNull()
+val isCiBuild = System.getenv("CI") == "true"
+
+if (isCiBuild && (injectedVersionName == null || injectedVersionCode == null)) {
+    throw GradleException(
+        "CI requiere -Ppowerclimb.versionName y -Ppowerclimb.versionCode; " +
+            "los calcula .github/workflows/release.yml desde los tags de git.",
+    )
+}
+
+fun versionCodeOf(versionName: String): Int {
+    val parts = versionName.split(".")
+    require(parts.size == 3) { "powerclimb.baseVersion debe ser X.Y.Z, pero era '$versionName'" }
+    return parts[0].toInt() * 10_000 + parts[1].toInt() * 100 + parts[2].toInt()
+}
+
+val baseVersionName = providers.gradleProperty("powerclimb.baseVersion").get()
+val appVersionName = injectedVersionName ?: "$baseVersionName-local"
+val appVersionCode = injectedVersionCode ?: versionCodeOf(baseVersionName)
 
 android {
     namespace = "com.powerclimb"
@@ -24,8 +43,8 @@ android {
         applicationId = "com.powerclimb"
         minSdk = 26
         targetSdk = 34
-        versionCode = ciVersionCode ?: 3
-        versionName = ciVersionName ?: "0.3.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {

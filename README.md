@@ -34,6 +34,8 @@ https://github.com/<usuario>/<repo>/releases/latest/download/powerclimb.apk
 
 El versionado es automático: cada release parte del último tag `vX.Y.Z` y sube el patch (`v0.3.0` → `v0.3.1` → `v0.3.2`…). El `versionCode` del APK se calcula como `major * 10000 + minor * 100 + patch`, así que siempre crece y el sideload actualiza bien sin desinstalar. No hace falta tocar `app/build.gradle.kts` para publicar; para un cambio de minor o major, crea el tag a mano (`git tag v0.4.0 && git push origin v0.4.0`) antes del siguiente push.
 
+En CI la versión es obligatoria: si el workflow no inyecta `powerclimb.versionName`/`powerclimb.versionCode`, el build falla en vez de publicar una versión por defecto. Los builds locales usan `powerclimb.baseVersion` de `gradle.properties` y se marcan como `X.Y.Z-local`.
+
 Las builds de CI se firman con la clave pública `ci/powerclimb-ci.jks` para que las actualizaciones sean instalables. Se puede sustituir por una clave privada configurando los secrets indicados en [`ci/README.md`](ci/README.md).
 
 ## Base técnica
