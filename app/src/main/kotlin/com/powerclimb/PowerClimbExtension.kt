@@ -3,6 +3,7 @@ package com.powerclimb
 import android.util.Log
 import com.powerclimb.data.ClimbMonitor
 import com.powerclimb.debug.DebugClimbBridge
+import com.powerclimb.ui.ClimbFieldMode
 import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.extension.KarooExtension
 
@@ -45,6 +46,10 @@ class PowerClimbExtension : KarooExtension(EXTENSION_ID, BuildConfig.VERSION_NAM
     }
 
     override val types by lazy {
-        listOf(ClimbAvgPowerDataType(this))
+        listOf(
+            ClimbAvgPowerDataType(this, ClimbFieldMode.NUMERIC),
+            ClimbAvgPowerDataType(this, ClimbFieldMode.VISUAL),
+            ClimbAvgPowerDataType(this, ClimbFieldMode.ZONE),
+        )
     }
 }

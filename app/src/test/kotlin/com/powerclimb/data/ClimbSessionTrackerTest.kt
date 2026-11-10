@@ -38,7 +38,7 @@ class ClimbSessionTrackerTest {
 
         assertEquals(ClimbPhase.FINISHED, tracker.state.value.phase)
         assertEquals(200, tracker.state.value.averageWatts)
-        assertEquals(5, tracker.state.value.elapsedSeconds)
+        assertEquals(10, tracker.state.value.elapsedSeconds)
 
         tracker.onClimbSignal(100.0, 1_000.0, 2, 20_000)
         tracker.onPower(200, 20_000)
@@ -49,6 +49,19 @@ class ClimbSessionTrackerTest {
         assertEquals(200, next.averageWatts)
         assertEquals(2, next.climbNumber)
         assertEquals(1, next.elapsedSeconds)
+    }
+
+    @Test
+    fun `distance signal can start a climb when elevation is zero`() {
+        val tracker = ClimbSessionTracker()
+        tracker.onRideState(RideStatus.RECORDING, 0)
+        tracker.onClimbSignal(0.0, 1_000.0, 1, 0)
+        tracker.onPower(200, 0)
+        tracker.onPower(200, 1_000)
+
+        val state = tracker.state.value
+        assertEquals(ClimbPhase.ACTIVE, state.phase)
+        assertEquals(200, state.averageWatts)
     }
 
     @Test
@@ -112,7 +125,7 @@ class ClimbSessionTrackerTest {
 
         val state = tracker.state.value
         assertEquals(200, state.averageWatts)
-        assertEquals(2, state.elapsedSeconds)
+        assertEquals(7, state.elapsedSeconds)
     }
 
     @Test
@@ -138,6 +151,26 @@ class ClimbSessionTrackerTest {
     }
 
     @Test
+    fun `clock stays frozen during the explicit summit grace`() {
+        val tracker = ClimbSessionTracker()
+        tracker.onRideState(RideStatus.RECORDING, 0)
+        tracker.onClimbSignal(100.0, 1_000.0, 1, 0)
+
+        for (second in 0..5) {
+            tracker.onPower(200, second * 1_000L)
+        }
+        tracker.onClimbSignal(100.0, 1_000.0, 1, 5_000)
+        tracker.onClimbSignal(0.0, 0.0, 1, 6_000)
+        tracker.onTick(7_000)
+        tracker.onTick(8_000)
+
+        val state = tracker.state.value
+        assertEquals(ClimbPhase.FINISHED, state.phase)
+        assertEquals(200, state.averageWatts)
+        assertEquals(6, state.elapsedSeconds)
+    }
+
+    @Test
     fun `watchdog ends climb when stream stops`() {
         val tracker = ClimbSessionTracker()
         tracker.onRideState(RideStatus.RECORDING, 0)
@@ -151,6 +184,7 @@ class ClimbSessionTrackerTest {
         val state = tracker.state.value
         assertEquals(ClimbPhase.FINISHED, state.phase)
         assertEquals(200, state.averageWatts)
+        assertEquals(8, state.elapsedSeconds)
     }
 
     @Test
@@ -166,7 +200,7 @@ class ClimbSessionTrackerTest {
     }
 
     @Test
-    fun `ride idle resets everything`() {
+    fun `ride idle preserves last value and next ride clears it`() {
         val tracker = ClimbSessionTracker()
         tracker.onRideState(RideStatus.RECORDING, 0)
         tracker.onClimbSignal(100.0, 1_000.0, 1, 0)
@@ -175,11 +209,35 @@ class ClimbSessionTrackerTest {
 
         tracker.onRideState(RideStatus.IDLE, 2_000)
 
+        val finished = tracker.state.value
+        assertEquals(ClimbPhase.FINISHED, finished.phase)
+        assertEquals(200, finished.averageWatts)
+        assertEquals(2, finished.elapsedSeconds)
+
+        tracker.onRideState(RideStatus.RECORDING, 3_000)
+
+        val nextRide = tracker.state.value
+        assertEquals(ClimbPhase.IDLE, nextRide.phase)
+        assertNull(nextRide.averageWatts)
+        assertNull(nextRide.currentWatts)
+        assertNull(nextRide.climbNumber)
+        assertEquals(0, nextRide.elapsedSeconds)
+    }
+
+    @Test
+    fun `debug reset clears the last value`() {
+        val tracker = ClimbSessionTracker()
+        tracker.onRideState(RideStatus.RECORDING, 0)
+        tracker.onClimbSignal(100.0, 1_000.0, 1, 0)
+        tracker.onPower(200, 0)
+        tracker.onPower(200, 1_000)
+        tracker.onRideState(RideStatus.IDLE, 2_000)
+
+        tracker.reset()
+
         val state = tracker.state.value
         assertEquals(ClimbPhase.IDLE, state.phase)
         assertNull(state.averageWatts)
-        assertNull(state.currentWatts)
-        assertNull(state.climbNumber)
         assertEquals(0, state.elapsedSeconds)
     }
 

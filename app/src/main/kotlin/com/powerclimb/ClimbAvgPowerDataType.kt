@@ -2,6 +2,8 @@ package com.powerclimb
 
 import android.content.Context
 import com.powerclimb.data.ClimbPowerState
+import com.powerclimb.data.PowerZoneProfile
+import com.powerclimb.ui.ClimbFieldMode
 import com.powerclimb.ui.ClimbPowerRemoteViews
 import io.hammerhead.karooext.extension.DataTypeImpl
 import io.hammerhead.karooext.internal.Emitter
@@ -15,15 +17,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class ClimbAvgPowerDataType(
     private val powerClimb: PowerClimbExtension,
-) : DataTypeImpl(PowerClimbExtension.EXTENSION_ID, TYPE_ID) {
-
-    companion object {
-        const val TYPE_ID = "climb-avg-power"
-    }
+    private val mode: ClimbFieldMode,
+) : DataTypeImpl(PowerClimbExtension.EXTENSION_ID, mode.typeId) {
 
     override fun startStream(emitter: Emitter<StreamState>) {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -55,13 +55,25 @@ class ClimbAvgPowerDataType(
         emitter.onNext(UpdateGraphicConfig(showHeader = false))
 
         val compact = ClimbPowerRemoteViews.isCompact(config)
+        val wide = ClimbPowerRemoteViews.isWide(config)
 
         if (config.preview) {
+            val previewZones = PowerZoneProfile
+                .from(powerClimb.monitor.profile.value)
+                .takeIf { it.zones.isNotEmpty() }
+                ?: PowerZoneProfile.PREVIEW
+            val previewState = ClimbPowerState.PREVIEW.copy(
+                averageWatts = previewAverage(previewZones),
+            )
             emitter.updateView(
                 ClimbPowerRemoteViews.build(
                     context = context,
-                    state = ClimbPowerState.PREVIEW,
+                    state = previewState,
+                    zones = previewZones,
+                    mode = mode,
+                    config = config,
                     compact = compact,
+                    wide = wide,
                 ),
             )
             emitter.setCancellable { }
@@ -70,18 +82,36 @@ class ClimbAvgPowerDataType(
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope.launch {
-            powerClimb.monitor.state
-                .collect { state ->
-                    emitter.updateView(
-                        ClimbPowerRemoteViews.build(
-                            context = context,
-                            state = state,
-                            compact = compact,
-                        ),
-                    )
-                }
+            combine(
+                powerClimb.monitor.state,
+                powerClimb.monitor.profile,
+            ) { state, profile ->
+                state to PowerZoneProfile.from(profile)
+            }.collect { (state, zones) ->
+                emitter.updateView(
+                    ClimbPowerRemoteViews.build(
+                        context = context,
+                        state = state,
+                        zones = zones,
+                        mode = mode,
+                        config = config,
+                        compact = compact,
+                        wide = wide,
+                    ),
+                )
+            }
         }
 
         emitter.setCancellable { scope.cancel() }
+    }
+
+    private fun previewAverage(zones: PowerZoneProfile): Int {
+        val zone = zones.zones.getOrNull(zones.zones.size / 2)
+            ?: return ClimbPowerState.PREVIEW.averageWatts ?: 247
+        return if (zone.max == Int.MAX_VALUE) {
+            zone.min + 50
+        } else {
+            (zone.min + zone.max) / 2
+        }
     }
 }

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PowerClimb</string>
+    <string name="extension_name">PowerClimb</string>
+
+    <string name="datatype_name_numeric">Pot. Subida</string>
+    <string name="datatype_name_visual">Pot. Subida Visual</string>
+    <string name="datatype_name_zone">Pot. Subida Zonas</string>
+
+    <string name="datatype_description_numeric">Potencia media ponderada por tiempo de la subida activa del Climber nativo</string>
+    <string name="datatype_description_visual">Visual circular de zonas de potencia con la media ponderada por tiempo de la subida activa del Climber nativo</string>
+    <string name="datatype_description_zone">Fondo del color de la zona de potencia con la media ponderada por tiempo de la subida activa del Climber nativo</string>
+
+    <string name="field_label">POT. SUBIDA</string>
+    <string name="field_empty">—</string>
+</resources>

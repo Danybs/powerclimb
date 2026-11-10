@@ -8,8 +8,22 @@
 
     <DataType
         typeId="climb-avg-power"
-        displayName="@string/datatype_name"
-        description="@string/datatype_description"
+        displayName="@string/datatype_name_numeric"
+        description="@string/datatype_description_numeric"
+        graphical="true"
+        icon="@drawable/ic_powerclimb" />
+
+    <DataType
+        typeId="climb-avg-power-visual"
+        displayName="@string/datatype_name_visual"
+        description="@string/datatype_description_visual"
+        graphical="true"
+        icon="@drawable/ic_powerclimb" />
+
+    <DataType
+        typeId="climb-avg-power-zone"
+        displayName="@string/datatype_name_zone"
+        description="@string/datatype_description_zone"
         graphical="true"
         icon="@drawable/ic_powerclimb" />
 

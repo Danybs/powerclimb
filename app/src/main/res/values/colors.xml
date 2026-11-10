@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="pc_black">#000000</color>
-    <color name="pc_white">#FFFFFF</color>
-    <color name="pc_accent">#FFD400</color>
-    <color name="pc_muted">#A0A0A0</color>
-    <color name="pc_dim">#707070</color>
-    <color name="pc_pause">#FF9800</color>
-    <color name="pc_finished">#9E9E9E</color>
+    <color name="pc_text_primary">#000000</color>
+    <color name="pc_text_secondary">#99000000</color>
+    <color name="pc_ring_neutral">#66000000</color>
+
+    <color name="pc_zone1">#60EEB2</color>
+    <color name="pc_zone2">#00B988</color>
+    <color name="pc_zone3">#FFF500</color>
+    <color name="pc_zone4">#FB8C65</color>
+    <color name="pc_zone5">#FE581F</color>
+    <color name="pc_zone6">#D60404</color>
+    <color name="pc_zone7">#B700A2</color>
 </resources>

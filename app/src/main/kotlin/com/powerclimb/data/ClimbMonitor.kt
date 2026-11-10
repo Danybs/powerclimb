@@ -8,11 +8,15 @@ import io.hammerhead.karooext.models.OnNavigationState
 import io.hammerhead.karooext.models.OnStreamState
 import io.hammerhead.karooext.models.RideState
 import io.hammerhead.karooext.models.StreamState
+import io.hammerhead.karooext.models.UserProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -38,6 +42,9 @@ class ClimbMonitor(
 
     private val tracker = ClimbSessionTracker()
     val state = tracker.state
+
+    private val _profile = MutableStateFlow<UserProfile?>(null)
+    val profile: StateFlow<UserProfile?> = _profile.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val consumerIds = mutableListOf<String>()
@@ -110,6 +117,14 @@ class ClimbMonitor(
             handleRideState(event)
         }
 
+        consumerIds += karooSystem.addConsumer<UserProfile> { userProfile ->
+            _profile.value = userProfile
+            Log.i(
+                TAG,
+                "profile ftp=${userProfile.ftp} powerZones=${userProfile.powerZones.size}",
+            )
+        }
+
         // Navigation is only used for diagnostics: the native Climber streams
         // are the source of truth for this data field.
         consumerIds += karooSystem.addConsumer<OnNavigationState> { event ->
@@ -134,6 +149,7 @@ class ClimbMonitor(
 
         consumerIds.forEach { karooSystem.removeConsumer(it) }
         consumerIds.clear()
+        _profile.value = null
 
         tickerJob?.cancel()
         tickerJob = null
@@ -228,6 +244,9 @@ class ClimbMonitor(
         debugCleanupJob = scope.launch {
             delay(3_000L)
             debugActive = false
+            if (lastNativeRideStatus != RideStatus.RECORDING) {
+                tracker.onRideState(lastNativeRideStatus, nowMs())
+            }
             Log.i(TAG, "DEBUG simulation released to native streams")
         }
     }
@@ -240,7 +259,7 @@ class ClimbMonitor(
         debugCleanupJob = null
         debugActive = false
         val now = nowMs()
-        tracker.onRideState(RideStatus.IDLE, now)
+        tracker.reset()
         if (lastNativeRideStatus != RideStatus.IDLE) {
             tracker.onRideState(lastNativeRideStatus, now)
         }
@@ -335,10 +354,8 @@ class ClimbMonitor(
         logPhaseIfChanged()
     }
 
-    private fun isOnClimb(): Boolean = when {
-        latestElevationToTop != null -> latestElevationToTop!! > 0.0
-        latestDistanceToTop != null -> latestDistanceToTop!! > 0.0
-        else -> false
+    private fun isOnClimb(): Boolean {
+        return (latestElevationToTop ?: 0.0) > 0.0 || (latestDistanceToTop ?: 0.0) > 0.0
     }
 
     private fun logClimbTransitionIfChanged() {

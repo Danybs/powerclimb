@@ -1,37 +1,60 @@
 package com.powerclimb.ui
 
 import android.content.Context
+import android.graphics.Color
 import android.util.TypedValue
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.RemoteViews
 import com.powerclimb.R
-import com.powerclimb.data.ClimbPhase
 import com.powerclimb.data.ClimbPowerState
+import com.powerclimb.data.PowerZoneProfile
 import io.hammerhead.karooext.models.ViewConfig
-import java.util.Locale
 
 object ClimbPowerRemoteViews {
+
+    private val dotIds = intArrayOf(
+        R.id.field_dot_1,
+        R.id.field_dot_2,
+        R.id.field_dot_3,
+        R.id.field_dot_4,
+        R.id.field_dot_5,
+        R.id.field_dot_6,
+        R.id.field_dot_7,
+        R.id.field_dot_8,
+        R.id.field_dot_9,
+        R.id.field_dot_10,
+    )
+
+    private val zoneBackgrounds = intArrayOf(
+        R.drawable.pc_zone_bg_1,
+        R.drawable.pc_zone_bg_2,
+        R.drawable.pc_zone_bg_3,
+        R.drawable.pc_zone_bg_4,
+        R.drawable.pc_zone_bg_5,
+        R.drawable.pc_zone_bg_6,
+        R.drawable.pc_zone_bg_7,
+    )
 
     fun isCompact(config: ViewConfig): Boolean {
         return config.viewSize.first < 280 || config.viewSize.second < 220
     }
 
+    fun isWide(config: ViewConfig): Boolean {
+        // Total grid width is 60 columns. A 2-column-wide field spans at least
+        // 50, while the compact 1x1 field does not.
+        return config.gridSize.first >= 50
+    }
+
     fun build(
         context: Context,
         state: ClimbPowerState,
+        zones: PowerZoneProfile,
+        mode: ClimbFieldMode,
+        config: ViewConfig,
         compact: Boolean,
+        wide: Boolean,
     ): RemoteViews {
-        val active = state.phase == ClimbPhase.ACTIVE
-        val finished = state.phase == ClimbPhase.FINISHED
-        val paused = active && state.ridePaused
-
-        val valueText = when {
-            active -> state.averageWatts?.toString() ?: "···"
-            finished -> state.averageWatts?.toString() ?: "—"
-            else -> "—"
-        }
-        val showUnit = (active || finished) && state.averageWatts != null
-
         val layout = if (compact) {
             R.layout.powerclimb_field_compact
         } else {
@@ -39,112 +62,107 @@ object ClimbPowerRemoteViews {
         }
         val views = RemoteViews(context.packageName, layout)
 
+        val average = state.averageWatts
+        val hasValue = average != null
+        val valueText = average?.toString() ?: context.getString(R.string.field_empty)
+        val zone = zones.zoneFor(average)
+        val onZoneBackground = mode == ClimbFieldMode.ZONE && zone != null
+
+        val themePrimary = context.getColor(R.color.pc_text_primary)
+        val themeSecondary = context.getColor(R.color.pc_text_secondary)
+        val zoneColor = zone?.let { PowerZonePalette.colorFor(it.index) }
+        val primary = if (onZoneBackground) {
+            PowerZonePalette.contrastForColor(zoneColor!!)
+        } else {
+            themePrimary
+        }
+        val secondary = if (onZoneBackground) {
+            PowerZonePalette.withAlpha(primary, 0xCC)
+        } else {
+            themeSecondary
+        }
+
+        if (onZoneBackground) {
+            val background = zoneBackgrounds[zone!!.index.mod(zoneBackgrounds.size)]
+            views.setInt(R.id.field_root, "setBackgroundResource", background)
+        } else {
+            views.setInt(R.id.field_root, "setBackgroundColor", Color.TRANSPARENT)
+        }
+
+        views.setTextViewText(R.id.field_label, context.getString(R.string.field_label))
+        views.setTextColor(R.id.field_label, secondary)
+        views.setInt(R.id.field_icon, "setColorFilter", primary)
+
         views.setTextViewText(R.id.field_value, valueText)
+        views.setTextColor(R.id.field_value, if (hasValue) primary else secondary)
         views.setTextViewTextSize(
             R.id.field_value,
             TypedValue.COMPLEX_UNIT_SP,
-            valueSize(valueText.length, compact),
-        )
-        views.setTextColor(
-            R.id.field_value,
-            context.getColor(
-                when {
-                    active -> R.color.pc_white
-                    finished -> R.color.pc_finished
-                    else -> R.color.pc_muted
-                },
-            ),
-        )
-        views.setViewVisibility(
-            R.id.field_unit,
-            if (showUnit) View.VISIBLE else View.GONE,
+            valueSize(config, valueText, compact),
         )
 
-        views.setTextColor(
-            R.id.field_label,
-            context.getColor(
-                when {
-                    paused -> R.color.pc_pause
-                    active -> R.color.pc_accent
-                    finished -> R.color.pc_finished
-                    else -> R.color.pc_dim
-                },
-            ),
+        views.setTextViewText(R.id.field_ball_value, valueText)
+        views.setTextColor(R.id.field_ball_value, if (hasValue) primary else secondary)
+        views.setTextViewTextSize(
+            R.id.field_ball_value,
+            TypedValue.COMPLEX_UNIT_SP,
+            ballValueSize(config, compact),
         )
 
-        val badge = state.climbNumber
-        if (active && badge != null && badge > 0) {
-            views.setTextViewText(R.id.field_badge, "#$badge")
-            views.setTextColor(
-                R.id.field_badge,
-                context.getColor(if (paused) R.color.pc_pause else R.color.pc_accent),
-            )
-            views.setViewVisibility(R.id.field_badge, View.VISIBLE)
-        } else {
-            views.setViewVisibility(R.id.field_badge, View.GONE)
+        val visual = mode == ClimbFieldMode.VISUAL
+        views.setViewVisibility(R.id.field_value, if (visual) View.GONE else View.VISIBLE)
+        views.setViewVisibility(R.id.field_visual, if (visual) View.VISIBLE else View.GONE)
+        views.setInt(
+            R.id.field_visual,
+            "setOrientation",
+            if (wide || !compact) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL,
+        )
+
+        views.setInt(
+            R.id.field_ring,
+            "setColorFilter",
+            zoneColor ?: context.getColor(R.color.pc_ring_neutral),
+        )
+
+        val zoneCount = zones.zones.size.coerceAtMost(dotIds.size)
+        dotIds.forEachIndexed { dotIndex, dotId ->
+            if (dotIndex < zoneCount) {
+                views.setViewVisibility(dotId, View.VISIBLE)
+                views.setInt(dotId, "setColorFilter", PowerZonePalette.colorFor(dotIndex))
+                val alpha = when {
+                    zone == null -> 0.22f
+                    zone.index == dotIndex -> 1f
+                    else -> 0.30f
+                }
+                views.setFloat(dotId, "setAlpha", alpha)
+            } else {
+                views.setViewVisibility(dotId, View.GONE)
+            }
         }
-
-        val subText = when {
-            paused -> "${context.getString(R.string.field_paused)} · ${formatDuration(state.elapsedSeconds)}"
-            active && state.averageWatts == null && state.elapsedSeconds == 0 -> {
-                context.getString(R.string.field_taking_data)
-            }
-
-            active && state.currentWatts != null -> {
-                "${context.getString(R.string.field_actual, state.currentWatts)} · " +
-                    formatDuration(state.elapsedSeconds)
-            }
-
-            active -> {
-                "${context.getString(R.string.field_no_power)} · " +
-                    formatDuration(state.elapsedSeconds)
-            }
-
-            finished -> {
-                "${context.getString(R.string.field_finished)} · " +
-                    formatDuration(state.elapsedSeconds)
-            }
-
-            else -> context.getString(R.string.field_no_climb)
-        }
-
-        views.setTextViewText(R.id.field_sub, subText)
-        views.setTextColor(
-            R.id.field_sub,
-            context.getColor(
-                when {
-                    paused -> R.color.pc_pause
-                    active -> R.color.pc_muted
-                    finished -> R.color.pc_finished
-                    else -> R.color.pc_dim
-                },
-            ),
-        )
 
         return views
     }
 
-    private fun valueSize(length: Int, compact: Boolean): Float {
-        return when {
-            compact && length >= 4 -> 30f
-            compact -> 38f
-            length >= 4 -> 48f
-            else -> 64f
-        }
+    private fun valueSize(config: ViewConfig, value: String, compact: Boolean): Float {
+        val base = config.textSize
+            .takeIf { it > 0 }
+            ?.toFloat()
+            ?: if (compact) 38f else 64f
+        val adjusted = if (value.length >= 4) base * 0.82f else base
+        return adjusted.coerceIn(
+            minimumValue = if (compact) 24f else 36f,
+            maximumValue = if (compact) 52f else 84f,
+        )
     }
 
-    private fun formatDuration(seconds: Int): String {
-        val total = seconds.coerceAtLeast(0)
-        return if (total >= 3_600) {
-            String.format(
-                Locale.US,
-                "%d:%02d:%02d",
-                total / 3_600,
-                (total % 3_600) / 60,
-                total % 60,
-            )
-        } else {
-            String.format(Locale.US, "%d:%02d", total / 60, total % 60)
-        }
+    private fun ballValueSize(config: ViewConfig, compact: Boolean): Float {
+        val base = config.textSize
+            .takeIf { it > 0 }
+            ?.toFloat()
+            ?: if (compact) 38f else 64f
+        return (base * 0.56f).coerceIn(
+            minimumValue = 20f,
+            maximumValue = if (compact) 30f else 42f,
+        )
     }
 }

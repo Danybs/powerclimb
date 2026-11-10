@@ -22,7 +22,11 @@ enum class ClimbPhase {
  *
  * [averageWatts] is the time-weighted average power of the active climb while
  * [phase] is [ClimbPhase.ACTIVE], and the final average while it is
- * [ClimbPhase.FINISHED].
+ * [ClimbPhase.FINISHED]. The final average stays available until the next
+ * climb starts or a new ride begins.
+ *
+ * [elapsedSeconds] is a real, pause-aware clock kept for future members of the
+ * PowerClimb family. It is deliberately not rendered by the current field.
  */
 data class ClimbPowerState(
     val phase: ClimbPhase = ClimbPhase.IDLE,
@@ -51,11 +55,15 @@ data class ClimbPowerState(
  * - A climb starts on the first active climb packet.
  * - A brief loss of the climb signal (<= [endGraceMs]) does not end the climb.
  * - A climb ends after [endGraceMs] without an active packet, when the climb
- *   number changes, or when the ride stops.
+ *   number changes, or when the ride stops. A ride pause freezes accumulation
+ *   but does not discard the current climb.
  * - Power is integrated only while the ride is recording and not paused.
  * - Sensor gaps longer than [maxPowerGapMs] are not added to the average.
  * - The first power sample after a climb start is the reference point; no
  *   invented power is added for the time before it.
+ * - The final average is frozen at the summit and preserved after the ride
+ *   becomes idle. It is cleared only when the next climb or the next ride
+ *   starts.
  */
 class ClimbSessionTracker(
     private val endGraceMs: Long = 5_000L,
@@ -79,34 +87,51 @@ class ClimbSessionTracker(
     private var currentWatts: Int? = null
     private var finalAverageWatts: Int? = null
 
+    /** Real climb clock, excluding pauses. Kept internally for future fields. */
+    private var elapsedMs = 0L
+    private var lastClockAtMs: Long? = null
+
     @Synchronized
     fun onRideState(status: RideStatus, nowMs: Long) {
         when (status) {
             RideStatus.IDLE -> {
+                if (phase == ClimbPhase.ACTIVE) {
+                    finish(nowMs)
+                } else if (phase == ClimbPhase.IDLE) {
+                    resetSession()
+                }
                 rideRecording = false
                 ridePaused = false
-                resetSession()
+                lastClockAtMs = null
                 publish()
             }
 
             RideStatus.RECORDING -> {
+                // A fresh RECORDING transition after IDLE represents a new ride.
+                // Do not clear a finished climb merely because the ride ended.
+                if (!rideRecording && phase == ClimbPhase.FINISHED) {
+                    resetSession()
+                }
                 rideRecording = true
                 if (ridePaused) {
                     ridePaused = false
                     lastPowerAtMs = null
                     lastPowerWatts = null
                 }
+                if (phase == ClimbPhase.ACTIVE && explicitOffAtMs == null) {
+                    lastClockAtMs = nowMs
+                }
                 publish()
             }
 
             RideStatus.PAUSED -> {
-                rideRecording = true
-                if (!ridePaused) {
+                if (phase == ClimbPhase.ACTIVE && !ridePaused && explicitOffAtMs == null) {
+                    advanceClock(nowMs)
                     flushPower(nowMs)
-                    lastPowerAtMs = null
-                    lastPowerWatts = null
                 }
+                rideRecording = true
                 ridePaused = true
+                lastClockAtMs = null
                 publish()
             }
         }
@@ -119,11 +144,7 @@ class ClimbSessionTracker(
         number: Int?,
         nowMs: Long,
     ) {
-        val onClimb = when {
-            elevationToTop != null -> elevationToTop > 0.0
-            distanceToTop != null -> distanceToTop > 0.0
-            else -> false
-        }
+        val onClimb = (elevationToTop ?: 0.0) > 0.0 || (distanceToTop ?: 0.0) > 0.0
 
         if (!rideRecording) {
             if (phase == ClimbPhase.ACTIVE) finish(nowMs)
@@ -131,7 +152,12 @@ class ClimbSessionTracker(
             return
         }
 
+        if (phase == ClimbPhase.ACTIVE && !ridePaused && explicitOffAtMs == null) {
+            advanceClock(nowMs)
+        }
+
         if (onClimb) {
+            val wasExplicitlyOff = explicitOffAtMs != null
             explicitOffAtMs = null
             val newNumber = number?.takeIf { it > 0 }
             if (phase == ClimbPhase.ACTIVE) {
@@ -141,6 +167,9 @@ class ClimbSessionTracker(
                 } else {
                     if (newNumber != null) climbNumber = newNumber
                     lastActiveAtMs = nowMs
+                    if (wasExplicitlyOff || lastClockAtMs == null) {
+                        lastClockAtMs = nowMs
+                    }
                 }
             } else {
                 startSession(nowMs, newNumber)
@@ -155,6 +184,7 @@ class ClimbSessionTracker(
                 flushPower(nowMs)
                 lastPowerAtMs = null
                 lastPowerWatts = null
+                lastClockAtMs = null
             }
             val offSince = firstOffAt ?: nowMs
             val lastActive = lastActiveAtMs
@@ -178,7 +208,13 @@ class ClimbSessionTracker(
 
         currentWatts = watts
 
-        if (phase == ClimbPhase.ACTIVE && rideRecording && !ridePaused && explicitOffAtMs == null) {
+        if (
+            phase == ClimbPhase.ACTIVE &&
+            rideRecording &&
+            !ridePaused &&
+            explicitOffAtMs == null
+        ) {
+            advanceClock(nowMs)
             val lastAt = lastPowerAtMs
             val lastW = lastPowerWatts
             if (lastAt == null || lastW == null) {
@@ -200,7 +236,13 @@ class ClimbSessionTracker(
 
     @Synchronized
     fun onPowerUnavailable(nowMs: Long) {
-        if (phase == ClimbPhase.ACTIVE && rideRecording && !ridePaused) {
+        if (
+            phase == ClimbPhase.ACTIVE &&
+            rideRecording &&
+            !ridePaused &&
+            explicitOffAtMs == null
+        ) {
+            advanceClock(nowMs)
             flushPower(nowMs)
         }
         lastPowerAtMs = null
@@ -217,6 +259,8 @@ class ClimbSessionTracker(
     fun onTick(nowMs: Long) {
         if (phase != ClimbPhase.ACTIVE || ridePaused) return
 
+        advanceClock(nowMs)
+
         val offSince = explicitOffAtMs
         val lastActive = lastActiveAtMs
         val shouldFinish = when {
@@ -226,8 +270,17 @@ class ClimbSessionTracker(
         }
         if (shouldFinish) {
             finish(nowMs)
-            publish()
         }
+        publish()
+    }
+
+    /** Clears the current and last value. Used by the debug simulator. */
+    @Synchronized
+    fun reset() {
+        resetSession()
+        rideRecording = false
+        ridePaused = false
+        publish()
     }
 
     private fun startSession(nowMs: Long, number: Int?) {
@@ -239,12 +292,16 @@ class ClimbSessionTracker(
         lastPowerWatts = null
         accumulatedWattMs = 0.0
         accumulatedMs = 0L
+        currentWatts = null
         finalAverageWatts = null
+        elapsedMs = 0L
+        lastClockAtMs = nowMs
     }
 
     private fun finish(nowMs: Long) {
         if (phase != ClimbPhase.ACTIVE) return
 
+        advanceClock(nowMs)
         flushPower(nowMs)
         finalAverageWatts = averageOrNull()
         phase = ClimbPhase.FINISHED
@@ -252,6 +309,26 @@ class ClimbSessionTracker(
         explicitOffAtMs = null
         lastPowerAtMs = null
         lastPowerWatts = null
+        lastClockAtMs = null
+    }
+
+    private fun advanceClock(nowMs: Long) {
+        if (
+            phase != ClimbPhase.ACTIVE ||
+            !rideRecording ||
+            ridePaused ||
+            explicitOffAtMs != null
+        ) {
+            lastClockAtMs = null
+            return
+        }
+        val last = lastClockAtMs
+        if (last == null) {
+            lastClockAtMs = nowMs
+        } else if (nowMs > last) {
+            elapsedMs += nowMs - last
+            lastClockAtMs = nowMs
+        }
     }
 
     private fun flushPower(nowMs: Long) {
@@ -277,6 +354,8 @@ class ClimbSessionTracker(
         accumulatedMs = 0L
         currentWatts = null
         finalAverageWatts = null
+        elapsedMs = 0L
+        lastClockAtMs = null
     }
 
     private fun averageOrNull(): Int? {
@@ -295,7 +374,7 @@ class ClimbSessionTracker(
             phase = phase,
             averageWatts = average,
             currentWatts = currentWatts,
-            elapsedSeconds = (accumulatedMs / 1_000L).toInt(),
+            elapsedSeconds = (elapsedMs / 1_000L).toInt(),
             climbNumber = climbNumber,
             ridePaused = ridePaused,
         )

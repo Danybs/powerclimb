@@ -2,16 +2,15 @@
 <resources>
     <string name="app_name">PowerClimb</string>
     <string name="extension_name">PowerClimb</string>
-    <string name="datatype_name">Pot. Subida</string>
-    <string name="datatype_description">Potencia media de la subida activa del Climber nativo</string>
 
-    <string name="field_label">POT. SUBIDA</string>
-    <string name="field_no_climb">SIN SUBIDA</string>
-    <string name="field_taking_data">TOMANDO DATOS</string>
-    <string name="field_paused">PAUSA</string>
-    <string name="field_finished">FIN</string>
-    <string name="field_no_power">SIN POTENCIA</string>
-    <string name="field_actual">ACT %1$d W</string>
+    <string name="datatype_name_numeric">Climb Power</string>
+    <string name="datatype_name_visual">Climb Power Visual</string>
+    <string name="datatype_name_zone">Climb Power Zones</string>
+
+    <string name="datatype_description_numeric">Time-weighted average power of the active native Climber climb</string>
+    <string name="datatype_description_visual">Circular power-zone visual with the time-weighted average of the active native Climber climb</string>
+    <string name="datatype_description_zone">Power-zone background with the time-weighted average of the active native Climber climb</string>
+
+    <string name="field_label">CLIMB POWER</string>
     <string name="field_empty">—</string>
-    <string name="field_watts">W</string>
 </resources>

@@ -1,8 +1,12 @@
 # PowerClimb
 
-Campo de datos gráfico para la Hammerhead Karoo 3 que muestra la **potencia media de la subida activa del Climber nativo**.
+Tres campos de datos gráficos para la Hammerhead Karoo 3 que muestran la **potencia media ponderada por tiempo de la subida activa del Climber nativo**:
 
-La pantalla es deliberadamente minimalista y de alto contraste: negro, blanco y amarillo, pensada para leerse con guantes y con el brillo bajo de la Karoo.
+- **Climb Power** / `Pot. Subida`: número grande alineado a la derecha.
+- **Climb Power Visual** / `Pot. Subida Visual`: anillo circular con una bolita por zona de potencia del dispositivo y el número centrado.
+- **Climb Power Zones** / `Pot. Subida Zonas`: el mismo número sobre el color de la zona de potencia media.
+
+La presentación es minimalista y transparente, con tipografías y colores nativos. En los modos numérico y visual el color del texto y del icono se adapta al tema claro u oscuro de la Karoo. El modo de zonas usa el color de la zona como fondo y elige texto negro o blanco para mantener el contraste.
 
 ## Qué hace
 
@@ -10,25 +14,47 @@ La pantalla es deliberadamente minimalista y de alto contraste: negro, blanco y 
   - `ELEVATION_TO_TOP`
   - `DISTANCE_TO_TOP`
   - `CLIMB_NUMBER`
-- Reinicia el acumulador al empezar una subida nueva, al terminar la subida o al terminar la ruta.
 - Mantiene la media acumulada aunque cambies de página mientras la subida sigue activa. El tracker vive en el servicio de la extensión, no en la vista.
-- Muestra:
-  - `POT. SUBIDA` como etiqueta.
-  - La media en vatios, en grande.
-  - La potencia actual y el tiempo acumulado como información secundaria.
-  - `FIN · mm:ss` al terminar la subida.
-  - `SIN SUBIDA` cuando no hay una subida activa.
-  - `PAUSA · mm:ss` si la ruta está pausada.
+- Al coronar, congela la media final y **la conserva** después de terminar la subida o la ruta.
+- Reinicia el valor al empezar la siguiente subida o una ruta nueva.
+- Muestra `—` únicamente cuando no hay ningún valor que mostrar.
+- No muestra tiempo, potencia actual, unidad `W`, insignia de subida ni línea secundaria. El reloj real se mantiene internamente para los futuros campos de tiempo, NP, pulso y cadencia.
+
+## Las tres variantes
+
+### Numérica
+
+- Etiqueta `CLIMB POWER` / `POT. SUBIDA` con icono de rayo y montaña.
+- Media en vatios, alineada a la derecha.
+- Fondo transparente y texto/icono según el tema.
+
+### Visual
+
+- Anillo del color de la zona media.
+- Una bolita por cada zona configurada en la Karoo; la zona activa se resalta y las demás quedan atenuadas.
+- Media centrada dentro del anillo.
+- Fondo transparente y texto/icono según el tema.
+- En 1x1 las bolitas van debajo de la bolita; en 2x1 y 2x2 van al lado.
+
+### Zonas
+
+- Fondo del color de la zona de la media.
+- Texto e icono en negro o blanco según el contraste del color.
+- Sin zonas configuradas no se inventa ningún color: el fondo queda transparente.
+
+Los límites y el número de zonas se leen de `UserProfile.powerZones` del dispositivo. No hay límites hardcodeados ni un fallback por porcentaje de FTP. La paleta es la nativa de Karoo: Z1 `#60EEB2`, Z2 `#00B988`, Z3 `#FFF500`, Z4 `#FB8C65`, Z5 `#FE581F`, Z6 `#D60404`, Z7 `#B700A2`.
 
 ## Estado del proyecto
 
-Versión `0.1.0` (MVP).
+Versión `0.2.0`.
 
 - Media **ponderada por tiempo**.
 - Los ceros de potencia cuentan mientras haya señal y la ruta no esté pausada.
 - Los huecos de potencia de más de 3 segundos se excluyen de la media.
-- Al detectar el coronamiento se congela la media inmediatamente. El final se confirma tras 2 segundos de señal explícita a cero, o tras 5 segundos si el stream deja de emitir, para no cortar por un fallo puntual del GPS o del stream.
-- La normalizada (NP) queda para una versión posterior. Añadirla requiere un buffer móvil o un acumulador de cuarta potencia; el tracker actual solo guarda vatios·segundo y segundos.
+- Al detectar el coronamiento se congela la media inmediatamente. El final se confirma tras 2 segundos de señal explícita a cero, o tras 5 segundos si el stream deja de emitir.
+- La pausa de la ruta congela la media y el reloj interno; al reanudar continúa.
+- La media final permanece visible hasta la siguiente subida o la siguiente ruta.
+- La normalizada (NP) queda para una versión posterior. Añadirla requiere un buffer móvil o un acumulador de cuarta potencia; el tracker actual solo guarda vatios·segundo, segundos y el reloj interno de la subida.
 
 ## Requisitos
 
@@ -72,14 +98,16 @@ Después, en la Karoo:
 
 1. Abre los ajustes de perfiles/páginas.
 2. Edita una página y añade un campo de datos.
-3. Busca `PowerClimb` y elige `Pot. Subida`.
-4. Ajusta el tamaño del campo. El diseño tiene variante compacta y variante grande.
+3. Busca `PowerClimb` y elige una de las tres variantes.
+4. Ajusta el tamaño del campo. El diseño tiene variante compacta 1x1 y variantes 2x1/2x2.
+
+No hay app de ajustes: la variante se elige en el selector de campos de datos de la Karoo.
 
 El APK de debug está firmado con la clave de debug. Para distribuir una versión release hace falta configurar un keystore propio.
 
 ## Validación en dispositivo
 
-La lógica de detección está probada con tests unitarios, pero el comportamiento real depende de los streams del Climber y del ciclo de vida del servicio en la Karoo. Para validar:
+La lógica está cubierta por tests unitarios, pero el comportamiento real depende de los streams del Climber y del ciclo de vida del servicio. Para validar:
 
 ```bash
 adb logcat -c
@@ -95,16 +123,23 @@ Durante una ruta con una subida:
 
 Pruebas mínimas:
 
-1. **Subida normal**: comparar la media mostrada con la potencia media del lap de la subida o con `Last Lap Power`.
-2. **Cambio de página**: cambiar a otra página y volver. La media debe seguir subiendo y los logs deben seguir llegando.
-3. **Pausa**: pausar la ruta, comprobar que la media se congela, reanudar y comprobar que continúa.
-4. **Fin de subida**: coronar y comprobar que aparece `FIN` con el valor final.
-5. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
-6. **Sin ruta**: comprobar qué hacen los streams nativos si el Climber no tiene una ruta activa. Si no hay señal, el campo debe quedarse en `SIN SUBIDA`.
+1. **Media real**: comparar la media mostrada con la potencia media del lap de la subida o con `Last Lap Power`.
+2. **Tres variantes**: añadir los tres campos y comprobar número, anillo/bolitas y fondo de zona.
+3. **Tamaños**: comprobar 1x1, 2x1 y 2x2; la etiqueta debe caber y el número no debe recortarse.
+4. **Tema claro/oscuro**: en numérico y visual el texto y el icono deben invertirse; en zonas debe mantenerse el contraste sobre el color.
+5. **Cambio de página**: cambiar a otra página y volver. La media debe seguir subiendo y los logs deben seguir llegando.
+6. **Pausa**: pausar la ruta, comprobar que la media se congela, reanudar y comprobar que continúa.
+7. **Fin de subida**: coronar y comprobar que el valor final se queda visible, sin etiqueta `FIN`.
+8. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
+9. **Ruta nueva**: terminar la ruta, comprobar que el último valor sigue visible y que al iniciar otra ruta aparece `—`.
+10. **Idioma**: con la Karoo en español deben aparecer `POT. SUBIDA`, `Pot. Subida Visual` y `Pot. Subida Zonas`; en inglés, `CLIMB POWER` y los nombres equivalentes.
+11. **Sin zonas**: probar un perfil sin zonas de potencia; no debe aparecer ningún color inventado.
+
+La pantalla nativa del Climber solo se abre en una subida real. La simulación sirve para validar los estados en una página de datos normal.
 
 ### Simulación de subida (solo build debug)
 
-Para validar los estados `ACTIVE`, `PAUSA`, `FIN` y `SIN SUBIDA` sin una subida real, el build debug incluye un receptor de broadcasts que inyecta datos falsos en el mismo `ClimbSessionTracker` que usan los streams nativos:
+Para validar los estados `ACTIVE`, pausa, final y reset sin una subida real, el build debug incluye un receptor de broadcasts que inyecta datos falsos en el mismo `ClimbSessionTracker` que usan los streams nativos:
 
 ```bash
 adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action start
@@ -119,11 +154,11 @@ El simulador:
 - Marca una subida ficticia con `ELEVATION_TO_TOP=350`, `DISTANCE_TO_TOP=3500` y `CLIMB_NUMBER=1`.
 - Genera potencia a 1 Hz con una rampa de 200 W a 257 W, en pasos de 3 W.
 - Pausa y reanuda igual que una ruta real, congelando la media.
-- Al terminar envía una señal explícita a cero; el estado `FIN` aparece tras unos 2 segundos.
-- `reset` vuelve a `SIN SUBIDA` y libera los streams nativos.
+- Al terminar envía una señal explícita a cero; el estado final aparece tras unos 2 segundos y el valor se conserva.
+- `reset` vuelve a `—` y libera los streams nativos.
 - Mientras está activo ignora los streams nativos para que no mezclen datos. Unos 3 segundos después de `finish` vuelve a escucharlos.
 
-El receptor solo se declara en `src/debug/AndroidManifest.xml`, así que no existe en un build release. Para ver el campo durante la simulación, ponlo también en una página de datos normal (por ejemplo, la página 2): la pantalla nativa del Climber no se abre con datos simulados porque la controla Karoo al detectar una subida real. El mismo campo, colocado en la pantalla del Climber, recibirá los datos reales cuando esa pantalla aparezca durante una subida.
+El receptor solo se declara en `src/debug/AndroidManifest.xml`, así que no existe en un build release. Para ver el campo durante la simulación, ponlo también en una página de datos normal (por ejemplo, la página 2): la pantalla nativa del Climber no se abre con datos simulados porque la controla Karoo al detectar una subida real.
 
 Los eventos del simulador aparecen en el log:
 
@@ -135,7 +170,7 @@ Busca líneas `DEBUG climb started`, `DEBUG tick=...`, `DEBUG ride paused`, `DEB
 
 ### Si la media se pierde al cambiar de página
 
-El MVP usa el servicio enlazado de la extensión. Si la Karoo lo destruye al desmontar la página, habrá que añadir un foreground service con notificación persistente, igual que hacen otras extensiones. El `ClimbMonitor` ya está separado de la vista para que ese cambio no afecte al cálculo. En la prueba en dispositivo el servicio sobrevivió al cambio de página; falta confirmarlo en una salida larga con la pantalla apagada o la app en segundo plano.
+El proyecto usa el servicio enlazado de la extensión. Si la Karoo lo destruye al desmontar la página, habrá que añadir un foreground service con notificación persistente, igual que hacen otras extensiones. El `ClimbMonitor` ya está separado de la vista para que ese cambio no afecte al cálculo. En la prueba en dispositivo el servicio sobrevivió al cambio de página; falta confirmarlo en una salida larga con la pantalla apagada o la app en segundo plano.
 
 ## Cómo se calcula
 
@@ -154,36 +189,43 @@ Detalles:
 - Al pausar la ruta se cierra el intervalo pendiente y se congela la media.
 - Al coronar se cierra el intervalo pendiente en ese instante; los vatios posteriores no entran en la media.
 - Al reanudar se vuelve a tomar la primera muestra como referencia.
+- El reloj interno excluye las pausas y se conserva al terminar; no se muestra en esta versión.
 
 ## Estructura
 
 ```text
 app/src/main/kotlin/com/powerclimb/
 ├── PowerClimbExtension.kt        Servicio de la extensión y conexión con Karoo
-├── ClimbAvgPowerDataType.kt     Data type gráfico y stream numérico
+├── ClimbAvgPowerDataType.kt     Data type gráfico compartido por las tres variantes
 ├── data/
-│   ├── ClimbMonitor.kt          Suscripción a los streams nativos
-│   └── ClimbSessionTracker.kt   Máquina de estados y media ponderada
+│   ├── ClimbMonitor.kt          Streams nativos, estado de ruta y perfil
+│   ├── ClimbSessionTracker.kt   Máquina de estados, media y reloj interno
+│   └── PowerZoneProfile.kt      Adaptación de las zonas del dispositivo
 ├── debug/
 │   ├── DebugClimbBridge.kt      Puente entre el receptor debug y el monitor
 │   └── DebugClimbReceiver.kt    Receptor del simulador (solo build debug)
 └── ui/
-    └── ClimbPowerRemoteViews.kt Renderizado RemoteViews
+    ├── ClimbFieldMode.kt        Modos numérico, visual y zonas
+    ├── ClimbPowerRemoteViews.kt Renderizado RemoteViews
+    └── PowerZonePalette.kt      Paleta y contraste nativos
 
-app/src/debug/AndroidManifest.xml  Declara el receptor del simulador
+app/src/main/res/values/strings.xml       Inglés por defecto
+app/src/main/res/values-es/strings.xml    Español
+app/src/debug/AndroidManifest.xml         Receptor del simulador
 ```
 
 Tests:
 
 ```text
 app/src/test/kotlin/com/powerclimb/data/ClimbSessionTrackerTest.kt
+app/src/test/kotlin/com/powerclimb/data/PowerZoneProfileTest.kt
 ```
 
 ## Limitaciones conocidas
 
 - No hay fallback por ruta: se confía en los streams del Climber nativo. Si en la prueba de dispositivo faltan eventos, el siguiente paso es añadir una detección de respaldo con `OnNavigationState` y `DISTANCE_TO_DESTINATION`.
-- Solo media; NP no está implementada.
-- No hay pantalla de configuración ni selección de métrica.
+- Solo media; NP, tiempo, pulso y cadencia no están implementados todavía como campos independientes.
+- No hay pantalla de configuración; la variante se elige en el selector de campos de la Karoo.
 - No hay foreground service: la prueba de cambio de página pasó con el servicio enlazado, pero falta validarlo en una salida larga con la pantalla apagada o la app en segundo plano.
 - El simulador no puede abrir la pantalla nativa del Climber; para validar visualmente el campo en esa pantalla hace falta una subida real. La simulación se prueba en una página de datos normal.
 - El APK es de debug y no está preparado para publicación. El receptor del simulador solo se declara en el build debug.
