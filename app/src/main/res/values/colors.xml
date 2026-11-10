@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pc_black">#000000</color>
+    <color name="pc_white">#FFFFFF</color>
+    <color name="pc_accent">#FFD400</color>
+    <color name="pc_muted">#A0A0A0</color>
+    <color name="pc_dim">#707070</color>
+    <color name="pc_pause">#FF9800</color>
+    <color name="pc_finished">#9E9E9E</color>
+</resources>

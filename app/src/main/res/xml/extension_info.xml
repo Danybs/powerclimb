@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExtensionInfo
+    id="powerclimb"
+    displayName="@string/extension_name"
+    icon="@drawable/ic_powerclimb"
+    scansDevices="false"
+    fitFile="false">
+
+    <DataType
+        typeId="climb-avg-power"
+        displayName="@string/datatype_name"
+        description="@string/datatype_description"
+        graphical="true"
+        icon="@drawable/ic_powerclimb" />
+
+</ExtensionInfo>
