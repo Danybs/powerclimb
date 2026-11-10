@@ -14,6 +14,8 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+# Public key used by GitHub Actions for sideload release builds.
+!ci/powerclimb-ci.jks
 
 # Kotlin
 .kotlin/

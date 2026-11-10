@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION_NAME=$(sed -n 's/.*versionName = "\(.*\)"/\1/p' app/build.gradle.kts | head -n1)
+          test -n "$VERSION_NAME"
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare optional private signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/powerclimb-release.jks"
+            echo "RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/powerclimb-release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build and test
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew test assembleRelease
+
+      - name: Rename and verify APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk powerclimb.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose powerclimb.apk
+          sha256sum powerclimb.apk
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: powerclimb-apk
+          path: powerclimb.apk
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.name }}
+          name: PowerClimb v${{ steps.version.outputs.name }}
+          make_latest: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: powerclimb.apk
+          body: |
+            ## Install
+
+            1. Download `powerclimb.apk` below.
+            2. Sideload to Karoo via USB/ADB:
+
+            ```bash
+            adb install powerclimb.apk
+            ```
+
+            Direct download:
+            https://github.com/${{ github.repository }}/releases/latest/download/powerclimb.apk

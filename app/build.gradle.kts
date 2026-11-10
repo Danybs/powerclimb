@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val ciKeystore = rootProject.file("ci/powerclimb-ci.jks")
+val externalKeystore = System.getenv("RELEASE_KEYSTORE_PATH")
+
 android {
     namespace = "com.powerclimb"
     compileSdk = 34
@@ -15,8 +18,20 @@ android {
         versionName = "0.3.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = externalKeystore?.let { file(it) } ?: ciKeystore
+            storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: "powerclimbci"
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "powerclimb"
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "powerclimbci"
+        }
+    }
+
     buildTypes {
         release {
+            // The committed CI key keeps sideload updates compatible. Override
+            // it with RELEASE_KEYSTORE_* secrets for a private signing key.
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

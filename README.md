@@ -18,6 +18,27 @@ PowerClimb usa la librería oficial de extensiones de Karoo:
 
 No es un fork del repositorio: es una app independiente construida sobre su API de extensiones, data types, streams y `RemoteViews`.
 
+## Instalar desde Releases
+
+Cada push a `main` compila, firma y publica `powerclimb.apk` en [Releases](../../releases/latest).
+
+1. Descarga [powerclimb.apk](../../releases/latest/download/powerclimb.apk) desde la última release.
+2. Sideload a la Karoo por USB/ADB:
+
+```bash
+adb install powerclimb.apk
+```
+
+La URL directa al último APK es:
+
+```text
+https://github.com/<usuario>/<repo>/releases/latest/download/powerclimb.apk
+```
+
+El workflow usa `versionName` como tag (`v0.3.0`). Para publicar una versión nueva, sube `versionCode` y `versionName` en `app/build.gradle.kts`.
+
+Las builds de CI se firman con la clave pública `ci/powerclimb-ci.jks` para que las actualizaciones sean instalables. Se puede sustituir por una clave privada configurando los secrets indicados en [`ci/README.md`](ci/README.md).
+
 ## Qué hace
 
 - Detecta el inicio y el fin de una subida usando los streams nativos del Climber:
@@ -89,12 +110,12 @@ app/build/outputs/apk/debug/app-debug.apk
 
 Si tu SDK está en otra ruta, cambia `sdk.dir` en `local.properties` o exporta `ANDROID_HOME` antes de compilar.
 
-## Instalar en la Karoo
+## Instalar una build local
 
-Con la Karoo conectada por USB y la depuración ADB activada:
+Para probar cambios locales, compila el APK de debug e instálalo con la Karoo conectada por USB y la depuración ADB activada:
 
 ```bash
-adb devices
+./gradlew :app:assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
@@ -107,7 +128,14 @@ Después, en la Karoo:
 
 No hay app de ajustes: la variante se elige en el selector de campos de datos de la Karoo.
 
-El APK de debug está firmado con la clave de debug. Para distribuir una versión release hace falta configurar un keystore propio.
+Para generar un APK release firmado localmente:
+
+```bash
+./gradlew :app:assembleRelease
+# app/build/outputs/apk/release/app-release.apk
+```
+
+La firma de release usa `ci/powerclimb-ci.jks` por defecto. Para usar una clave privada, exporta `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS` y `RELEASE_KEY_PASSWORD` antes de compilar.
 
 ## Validación en dispositivo
 
