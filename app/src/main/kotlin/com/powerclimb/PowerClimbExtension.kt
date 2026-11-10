@@ -2,6 +2,7 @@ package com.powerclimb
 
 import android.util.Log
 import com.powerclimb.data.ClimbMonitor
+import com.powerclimb.debug.DebugClimbBridge
 import io.hammerhead.karooext.KarooSystemService
 import io.hammerhead.karooext.extension.KarooExtension
 
@@ -20,6 +21,7 @@ class PowerClimbExtension : KarooExtension(EXTENSION_ID, BuildConfig.VERSION_NAM
 
         karooSystem = KarooSystemService(this)
         monitor = ClimbMonitor(karooSystem)
+        DebugClimbBridge.attach(monitor)
 
         karooSystem.connect { connected ->
             Log.i(TAG, "KarooSystem connected=$connected")
@@ -33,6 +35,7 @@ class PowerClimbExtension : KarooExtension(EXTENSION_ID, BuildConfig.VERSION_NAM
     override fun onDestroy() {
         Log.i(TAG, "Extension destroyed")
         if (::monitor.isInitialized) {
+            DebugClimbBridge.detach(monitor)
             monitor.stop()
         }
         if (::karooSystem.isInitialized) {

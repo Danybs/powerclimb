@@ -28,7 +28,7 @@ Versión `0.1.0` (MVP).
 - Los ceros de potencia cuentan mientras haya señal y la ruta no esté pausada.
 - Los huecos de potencia de más de 3 segundos se excluyen de la media.
 - Al detectar el coronamiento se congela la media inmediatamente. El final se confirma tras 2 segundos de señal explícita a cero, o tras 5 segundos si el stream deja de emitir, para no cortar por un fallo puntual del GPS o del stream.
-- La normalizada (NP) queda para una versión posterior. El diseño ya guarda la información necesaria para añadirla sin rehacer el tracker.
+- La normalizada (NP) queda para una versión posterior. Añadirla requiere un buffer móvil o un acumulador de cuarta potencia; el tracker actual solo guarda vatios·segundo y segundos.
 
 ## Requisitos
 
@@ -102,9 +102,40 @@ Pruebas mínimas:
 5. **Subida nueva**: empezar otra subida y comprobar que la media vuelve a empezar desde cero.
 6. **Sin ruta**: comprobar qué hacen los streams nativos si el Climber no tiene una ruta activa. Si no hay señal, el campo debe quedarse en `SIN SUBIDA`.
 
+### Simulación de subida (solo build debug)
+
+Para validar los estados `ACTIVE`, `PAUSA`, `FIN` y `SIN SUBIDA` sin una subida real, el build debug incluye un receptor de broadcasts que inyecta datos falsos en el mismo `ClimbSessionTracker` que usan los streams nativos:
+
+```bash
+adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action start
+adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action pause
+adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action resume
+adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action finish
+adb shell am broadcast -a com.powerclimb.DEBUG_CLIMB -p com.powerclimb --es action reset
+```
+
+El simulador:
+
+- Marca una subida ficticia con `ELEVATION_TO_TOP=350`, `DISTANCE_TO_TOP=3500` y `CLIMB_NUMBER=1`.
+- Genera potencia a 1 Hz con una rampa de 200 W a 257 W, en pasos de 3 W.
+- Pausa y reanuda igual que una ruta real, congelando la media.
+- Al terminar envía una señal explícita a cero; el estado `FIN` aparece tras unos 2 segundos.
+- `reset` vuelve a `SIN SUBIDA` y libera los streams nativos.
+- Mientras está activo ignora los streams nativos para que no mezclen datos. Unos 3 segundos después de `finish` vuelve a escucharlos.
+
+El receptor solo se declara en `src/debug/AndroidManifest.xml`, así que no existe en un build release. Para ver el campo durante la simulación, ponlo también en una página de datos normal (por ejemplo, la página 2): la pantalla nativa del Climber no se abre con datos simulados porque la controla Karoo al detectar una subida real. El mismo campo, colocado en la pantalla del Climber, recibirá los datos reales cuando esa pantalla aparezca durante una subida.
+
+Los eventos del simulador aparecen en el log:
+
+```bash
+adb logcat -s PowerClimb
+```
+
+Busca líneas `DEBUG climb started`, `DEBUG tick=...`, `DEBUG ride paused`, `DEBUG climb finish requested` y `phase=FINISHED ...`.
+
 ### Si la media se pierde al cambiar de página
 
-El MVP usa el servicio enlazado de la extensión. Si la Karoo lo destruye al desmontar la página, habrá que añadir un foreground service con notificación persistente, igual que hacen otras extensiones. El `ClimbMonitor` ya está separado de la vista para que ese cambio no afecte al cálculo.
+El MVP usa el servicio enlazado de la extensión. Si la Karoo lo destruye al desmontar la página, habrá que añadir un foreground service con notificación persistente, igual que hacen otras extensiones. El `ClimbMonitor` ya está separado de la vista para que ese cambio no afecte al cálculo. En la prueba en dispositivo el servicio sobrevivió al cambio de página; falta confirmarlo en una salida larga con la pantalla apagada o la app en segundo plano.
 
 ## Cómo se calcula
 
@@ -133,8 +164,13 @@ app/src/main/kotlin/com/powerclimb/
 ├── data/
 │   ├── ClimbMonitor.kt          Suscripción a los streams nativos
 │   └── ClimbSessionTracker.kt   Máquina de estados y media ponderada
+├── debug/
+│   ├── DebugClimbBridge.kt      Puente entre el receptor debug y el monitor
+│   └── DebugClimbReceiver.kt    Receptor del simulador (solo build debug)
 └── ui/
     └── ClimbPowerRemoteViews.kt Renderizado RemoteViews
+
+app/src/debug/AndroidManifest.xml  Declara el receptor del simulador
 ```
 
 Tests:
@@ -148,8 +184,9 @@ app/src/test/kotlin/com/powerclimb/data/ClimbSessionTrackerTest.kt
 - No hay fallback por ruta: se confía en los streams del Climber nativo. Si en la prueba de dispositivo faltan eventos, el siguiente paso es añadir una detección de respaldo con `OnNavigationState` y `DISTANCE_TO_DESTINATION`.
 - Solo media; NP no está implementada.
 - No hay pantalla de configuración ni selección de métrica.
-- No hay foreground service todavía; queda pendiente de la prueba de cambio de página.
-- El APK es de debug y no está preparado para publicación.
+- No hay foreground service: la prueba de cambio de página pasó con el servicio enlazado, pero falta validarlo en una salida larga con la pantalla apagada o la app en segundo plano.
+- El simulador no puede abrir la pantalla nativa del Climber; para validar visualmente el campo en esa pantalla hace falta una subida real. La simulación se prueba en una página de datos normal.
+- El APK es de debug y no está preparado para publicación. El receptor del simulador solo se declara en el build debug.
 
 ## Licencia
 

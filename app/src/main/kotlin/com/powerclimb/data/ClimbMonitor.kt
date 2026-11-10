@@ -30,6 +30,10 @@ class ClimbMonitor(
     companion object {
         private const val TAG = "PowerClimb"
         private const val TICK_MS = 1_000L
+
+        private const val DEBUG_ELEVATION_TO_TOP = 350.0
+        private const val DEBUG_DISTANCE_TO_TOP = 3_500.0
+        private const val DEBUG_CLIMB_NUMBER = 1
     }
 
     private val tracker = ClimbSessionTracker()
@@ -39,6 +43,14 @@ class ClimbMonitor(
     private val consumerIds = mutableListOf<String>()
     private var tickerJob: Job? = null
     private var started = false
+
+    @Volatile
+    private var debugActive = false
+    private var debugJob: Job? = null
+    private var debugCleanupJob: Job? = null
+
+    @Volatile
+    private var lastNativeRideStatus = RideStatus.IDLE
 
     @Volatile
     private var latestElevationToTop: Double? = null
@@ -126,10 +138,118 @@ class ClimbMonitor(
         tickerJob?.cancel()
         tickerJob = null
 
+        debugJob?.cancel()
+        debugJob = null
+        debugCleanupJob?.cancel()
+        debugCleanupJob = null
+        debugActive = false
+
         Log.i(TAG, "Climb monitor stopped")
     }
 
+    /**
+     * Debug-only simulation. It feeds the same [ClimbSessionTracker] used by
+     * the real native streams, so the whole service -> data type -> view path
+     * can be exercised without a route or a real climb.
+     */
+    @Synchronized
+    fun startDebugClimb() {
+        debugCleanupJob?.cancel()
+        debugCleanupJob = null
+        debugJob?.cancel()
+
+        debugActive = true
+        val now = nowMs()
+        tracker.onRideState(RideStatus.IDLE, now)
+        tracker.onRideState(RideStatus.RECORDING, now)
+        tracker.onClimbSignal(
+            DEBUG_ELEVATION_TO_TOP,
+            DEBUG_DISTANCE_TO_TOP,
+            DEBUG_CLIMB_NUMBER,
+            now,
+        )
+
+        debugJob = scope.launch {
+            var tick = 0
+            while (isActive) {
+                val tickNow = nowMs()
+                val watts = 200 + (tick % 20) * 3
+                tracker.onPower(watts, tickNow)
+                tracker.onClimbSignal(
+                    DEBUG_ELEVATION_TO_TOP,
+                    DEBUG_DISTANCE_TO_TOP,
+                    DEBUG_CLIMB_NUMBER,
+                    tickNow,
+                )
+                logPhaseIfChanged()
+
+                if (tick % 5 == 0) {
+                    val state = tracker.state.value
+                    Log.i(
+                        TAG,
+                        "DEBUG tick=$tick watts=$watts avg=${state.averageWatts} " +
+                            "elapsed=${state.elapsedSeconds}s phase=${state.phase}",
+                    )
+                }
+
+                tick++
+                delay(TICK_MS)
+            }
+        }
+
+        Log.i(TAG, "DEBUG climb started")
+    }
+
+    @Synchronized
+    fun pauseDebugRide() {
+        tracker.onRideState(RideStatus.PAUSED, nowMs())
+        logPhaseIfChanged()
+        Log.i(TAG, "DEBUG ride paused")
+    }
+
+    @Synchronized
+    fun resumeDebugRide() {
+        tracker.onRideState(RideStatus.RECORDING, nowMs())
+        logPhaseIfChanged()
+        Log.i(TAG, "DEBUG ride resumed")
+    }
+
+    @Synchronized
+    fun finishDebugClimb() {
+        val now = nowMs()
+        tracker.onRideState(RideStatus.RECORDING, now)
+        tracker.onClimbSignal(0.0, 0.0, DEBUG_CLIMB_NUMBER, now)
+        debugJob?.cancel()
+        debugJob = null
+        logPhaseIfChanged()
+        Log.i(TAG, "DEBUG climb finish requested")
+
+        debugCleanupJob?.cancel()
+        debugCleanupJob = scope.launch {
+            delay(3_000L)
+            debugActive = false
+            Log.i(TAG, "DEBUG simulation released to native streams")
+        }
+    }
+
+    @Synchronized
+    fun resetDebugSimulation() {
+        debugJob?.cancel()
+        debugJob = null
+        debugCleanupJob?.cancel()
+        debugCleanupJob = null
+        debugActive = false
+        val now = nowMs()
+        tracker.onRideState(RideStatus.IDLE, now)
+        if (lastNativeRideStatus != RideStatus.IDLE) {
+            tracker.onRideState(lastNativeRideStatus, now)
+        }
+        logPhaseIfChanged()
+        Log.i(TAG, "DEBUG simulation reset")
+    }
+
     private fun handlePower(event: OnStreamState) {
+        if (debugActive) return
         val streaming = event.state as? StreamState.Streaming
         if (streaming == null) {
             tracker.onPowerUnavailable(nowMs())
@@ -148,6 +268,7 @@ class ClimbMonitor(
     }
 
     private fun handleElevationToTop(event: OnStreamState) {
+        if (debugActive) return
         val values = (event.state as? StreamState.Streaming)?.dataPoint?.values ?: return
         val elevation = values[DataType.Field.ELEVATION_TO_TOP] ?: values[DataType.Field.SINGLE]
         if (elevation != null) {
@@ -157,6 +278,7 @@ class ClimbMonitor(
     }
 
     private fun handleDistanceToTop(event: OnStreamState) {
+        if (debugActive) return
         val values = (event.state as? StreamState.Streaming)?.dataPoint?.values ?: return
         val distance = values[DataType.Field.DISTANCE_TO_TOP] ?: values[DataType.Field.SINGLE]
         if (distance != null) {
@@ -166,6 +288,7 @@ class ClimbMonitor(
     }
 
     private fun handleClimbNumber(event: OnStreamState) {
+        if (debugActive) return
         val values = (event.state as? StreamState.Streaming)?.dataPoint?.values ?: return
         val number = values[DataType.Field.CLIMB_NUMBER] ?: values[DataType.Field.SINGLE]
         if (number != null) {
@@ -205,6 +328,8 @@ class ClimbMonitor(
             is RideState.Recording -> RideStatus.RECORDING
             is RideState.Paused -> RideStatus.PAUSED
         }
+        lastNativeRideStatus = status
+        if (debugActive) return
         tracker.onRideState(status, nowMs())
         Log.i(TAG, "ride state=$status")
         logPhaseIfChanged()
