@@ -40,6 +40,7 @@ android {
 }
 
 dependencies {
+    // Official Karoo extension SDK: https://github.com/hammerheadnav/karoo-ext
     implementation("com.github.hammerheadnav:karoo-ext:1.1.9")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
