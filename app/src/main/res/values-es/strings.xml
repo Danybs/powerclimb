@@ -9,6 +9,12 @@
     <string name="datatype_description_numeric">Potencia media ponderada por tiempo de la subida activa del Climber nativo</string>
     <string name="datatype_description_zone">Fondo del color de la zona de potencia con la media ponderada por tiempo de la subida activa del Climber nativo</string>
 
+    <string name="about_back">Volver</string>
+    <string name="about_summary">Potencia media de tu subida actual.</string>
+    <string name="about_fields">Pot. Subida: media en vatios.\nPot. Subida Zonas: la misma media con el color de tu zona de potencia.</string>
+    <string name="about_usage">Añade cualquiera de los campos de PowerClimb al editar una página de datos de tu perfil.</string>
+    <string name="about_notes">Usa Karoo Climber. No requiere configuración.</string>
+
     <string name="field_label">C.POWER</string>
     <string name="field_empty">--</string>
 </resources>

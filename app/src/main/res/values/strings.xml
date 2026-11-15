@@ -9,6 +9,12 @@
     <string name="datatype_description_numeric">Time-weighted average power of the active native Climber climb</string>
     <string name="datatype_description_zone">Power-zone background with the time-weighted average of the active native Climber climb</string>
 
+    <string name="about_back">Back</string>
+    <string name="about_summary">Average power for your current climb.</string>
+    <string name="about_fields">Climb Power: average watts.\nClimb Power Zones: the same average with power-zone colors.</string>
+    <string name="about_usage">Add either field from PowerClimb when editing a data page in your ride profile.</string>
+    <string name="about_notes">Uses Karoo Climber. No setup needed.</string>
+
     <string name="field_label">C.POWER</string>
     <!-- The native numeric font has no em-dash glyph; two hyphens render
          the same visual placeholder without a missing glyph. -->

@@ -6,6 +6,7 @@ on:
     # Solo releases cuando cambia código que afecta al APK.
     paths:
       - "app/**"
+      - "ci/**"
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - "gradle.properties"
@@ -139,6 +140,9 @@ jobs:
             echo "RELEASE_KEYSTORE_PATH=$RUNNER_TEMP/powerclimb-release.jks" >> "$GITHUB_ENV"
           fi
 
+      - name: Test Karoo manifest integration
+        run: python3 -m unittest discover -s ci -p "test_*.py"
+
       - name: Build and test
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -155,11 +159,19 @@ jobs:
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose powerclimb.apk
           sha256sum powerclimb.apk
 
+      - name: Generate Karoo app manifest
+        run: |
+          python3 ci/generate_manifest.py \
+            app/build/outputs/apk/release/output-metadata.json \
+            "$GITHUB_REPOSITORY" manifest.json
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: powerclimb-apk
-          path: powerclimb.apk
+          path: |
+            powerclimb.apk
+            manifest.json
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
@@ -169,10 +181,16 @@ jobs:
           make_latest: true
           generate_release_notes: true
           fail_on_unmatched_files: true
-          files: powerclimb.apk
+          files: |
+            powerclimb.apk
+            manifest.json
           body: |
             ## Install
 
+            Companion: share this app manifest URL with Karoo:
+            https://github.com/${{ github.repository }}/releases/latest/download/manifest.json
+
+            USB/ADB:
             1. Download `powerclimb.apk` below.
             2. Sideload to Karoo via USB/ADB:
 

@@ -11,9 +11,23 @@ En ambos modos el icono va a la izquierda y la etiqueta a la derecha del campo. 
 
 ## Instalar desde Releases
 
-Cada push a `main` que toque código de la app (`app/**`, Gradle o el workflow de release) compila, firma y publica `powerclimb.apk` en [Releases](../../releases/latest). Los cambios solo de documentación no generan release.
+Cada push a `main` que toque código de la app (`app/**`, `ci/**`, Gradle o el workflow de release) compila, firma y publica `powerclimb.apk` y `manifest.json` en [Releases](https://github.com/Danybs/powerclimb/releases/latest). Los cambios solo de documentación fuera de esas rutas no generan release.
 
-1. Descarga [powerclimb.apk](../../releases/latest/download/powerclimb.apk) desde la última release.
+### Desde Companion
+
+Comparte con Karoo desde Companion la URL del manifiesto de aplicación:
+
+```text
+https://github.com/Danybs/powerclimb/releases/latest/download/manifest.json
+```
+
+El APK declara esa misma URL en `io.hammerhead.karooext.MANIFEST_URL`. El JSON contiene el nombre, paquete, versión y enlace al APK; es distinto de `extension_info.xml`, que describe los campos de datos. Esta integración sigue el [ejemplo oficial del SDK](https://github.com/hammerheadnav/karoo-ext/blob/1.1.9/app/src/main/AndroidManifest.xml).
+
+Después de instalar, comprueba que desaparece `Installing`, PowerClimb aparece en el listado de extensiones instaladas y ofrece desinstalación. Comprueba también que siguen disponibles los dos campos. Que aparezca `INSTALL_SUCCEEDED` o funcionen los campos no demuestra por sí solo que Karoo haya completado el registro en su interfaz. La corrección de ese comportamiento requiere validación en el dispositivo.
+
+### Por USB/ADB
+
+1. Descarga [powerclimb.apk](https://github.com/Danybs/powerclimb/releases/latest/download/powerclimb.apk) desde la última release.
 2. Sideload a la Karoo por USB/ADB:
 
 ```bash
@@ -29,7 +43,7 @@ adb uninstall com.powerclimb
 La URL directa al último APK es:
 
 ```text
-https://github.com/<usuario>/<repo>/releases/latest/download/powerclimb.apk
+https://github.com/Danybs/powerclimb/releases/latest/download/powerclimb.apk
 ```
 
 El versionado es automático: cada release parte del último tag `vX.Y.Z` y sube el patch (`v0.3.0` → `v0.3.1` → `v0.3.2`…). El `versionCode` del APK se calcula como `major * 10000 + minor * 100 + patch`, así que siempre crece y el sideload actualiza bien sin desinstalar. No hace falta tocar `app/build.gradle.kts` para publicar; para un cambio de minor o major, crea el tag a mano (`git tag v0.4.0 && git push origin v0.4.0`) antes del siguiente push.
@@ -134,7 +148,7 @@ Después, en la Karoo:
 3. Busca `PowerClimb` y elige una de las dos variantes.
 4. Ajusta el tamaño del campo. El diseño se adapta a 1x1, 1x2, 2x1 y 2x2.
 
-No hay app de ajustes: la variante se elige en el selector de campos de datos de la Karoo.
+No hay app de ajustes: la variante se elige en el selector de campos de datos de la Karoo. Al abrir PowerClimb aparece un resumen de los dos campos y de cómo añadirlos al perfil. Esta pantalla informativa está disponible en español e inglés y no contiene ajustes. La entrada reutiliza una única tarea para evitar que abrir la app varias veces acumule pantallas idénticas. La flecha compacta de regreso se superpone abajo a la izquierda, sin reservar una franja fija ni reducir la altura del contenido. Solo hay margen al final del scroll para poder leer el último texto por encima de la flecha. Envía los eventos Android `KEYCODE_BACK` de pulsación y liberación, por la misma ruta que el botón físico; no llama a `finish()` directamente. Es un control de la app con aspecto Karoo, no un componente provisto por el firmware. La entrada de launcher también permite que Karoo muestre la app en su listado.
 
 Para generar un APK release firmado localmente:
 
