@@ -9,6 +9,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PowerClimb">
 
+        <meta-data
+            android:name="io.hammerhead.karooext.MANIFEST_URL"
+            android:value="https://github.com/Danybs/powerclimb/releases/latest/download/manifest.json" />
+
+        <activity
+            android:name=".LauncherActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.PowerClimb">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".PowerClimbExtension"
             android:exported="true"
